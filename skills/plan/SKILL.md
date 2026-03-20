@@ -85,7 +85,19 @@ Once consensus is reached, create the plan document.
 2. **Write the plan** to `docs/plans/{plan-name}.md` using the format below.
 3. **Read all available skills** in `.claude/skills/` and any installed plugins to understand what tooling exists for each task.
 
-### Phase 4: Keep the Plan Current
+### Phase 4: Gap Analysis
+
+Once the plan is written, invoke the `gap-analysis` skill against it. Hand it the plan document, the relevant codebase areas, and any specs or requirements that informed the plan. The gap analysis skill will tear apart the plan from every angle — business requirements, technical completeness, functionality holes, testing coverage, and documentation.
+
+**This is not optional.** A plan without a gap analysis is a plan with unknown unknowns. The gap analysis skill is deliberately combative — it will fight for gaps it finds, and that's the point. Every gap it identifies should be either:
+
+1. **Resolved** — addressed in the plan by adding/modifying phases, artifacts, or decisions.
+2. **Accepted as a known limitation** — documented in the "Out of Scope" section with an owner and rationale.
+3. **Disproven** — with evidence from the codebase, not opinions.
+
+Update the plan document with the results. Critical and major gaps from the analysis should be reflected in the "Gaps" section of the plan. If the gap analysis surfaces issues that change the implementation approach, revise the phases accordingly.
+
+### Phase 5: Keep the Plan Current
 
 As the conversation continues and decisions evolve:
 
@@ -187,11 +199,21 @@ _{Same structure — Artifacts table, Tests table, Commit message}_
 - **Data layer before controller** — Form Requests → Data Objects → Actions → Resources → Controller wiring.
 - **Controller tests fake Actions** — use `::fake()` to isolate controller logic from business logic.
 
-## Architectural Gaps
+## Gaps
 
-{Things that are missing, undefined, or need further discussion before implementation can proceed. These are blockers or risks, not tasks.}
+{Populated by the `gap-analysis` skill. Each gap is numbered for reference and categorized by severity. Only Critical and Major gaps are listed here — Minor gaps and Observations live in the full gap analysis report.}
 
-- **{Gap}:** {description of what's missing and why it matters}
+### Critical
+
+{Blockers. The plan cannot proceed with these unresolved.}
+
+- **GAP-{N} [{Category}] {Title}:** {Description. Why it matters. What needs to happen.}
+
+### Major
+
+{Serious deficiencies that must be addressed but don't block initial phases.}
+
+- **GAP-{N} [{Category}] {Title}:** {Description. Why it matters. What needs to happen.}
 
 ## Out of Scope
 
@@ -211,3 +233,4 @@ When assigning skills to tasks, use only skills that exist in `.claude/skills/` 
 - **Ground challenges in the codebase.** Read code and skills before claiming something is inconsistent. Don't guess.
 - **The plan is a living document.** Update it as things change. A stale plan is worse than no plan.
 - **If the user is right, say so and move on.** Being challenging doesn't mean being contrarian.
+- **Always run gap analysis before considering a plan complete.** A plan without a gap analysis is a rough draft, not a plan. Use the `gap-analysis` skill — don't skip it because the plan "looks good."
