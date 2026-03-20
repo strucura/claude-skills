@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "laravel-skills",
-      "source": "."
+      "source": "./"
     }
   ]
 }
