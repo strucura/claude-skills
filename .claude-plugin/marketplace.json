@@ -1,8 +1,12 @@
 {
+  "name": "laravel-skills-marketplace",
+  "owner": {
+    "name": "Andrew Leach"
+  },
   "plugins": [
     {
       "name": "laravel-skills",
-      "path": "."
+      "source": "."
     }
   ]
 }
