@@ -1,11 +1,11 @@
 {
-  "name": "laravel-skills-marketplace",
+  "name": "strucura-marketplace",
   "owner": {
     "name": "Andrew Leach"
   },
   "plugins": [
     {
-      "name": "laravel-skills",
+      "name": "strucura",
       "source": "./"
     }
   ]
