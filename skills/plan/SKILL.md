@@ -94,44 +94,15 @@ Every artifact in the plan must be assigned to either the **backend engineer** o
 
 Each phase must be tagged with its assigned engineer in the plan document. If a phase contains artifacts for both engineers, **split it into two sub-phases**: one for backend (runs first), one for frontend (runs after backend completes).
 
-#### Execution Order: Backend Before Frontend
-
-**Frontend work must never begin until all backend work for that phase is complete.** This is non-negotiable because:
-
-1. The frontend engineer needs API contracts to build against.
-2. Guessing at API shapes causes integration bugs.
-3. The backend engineer's report includes the actual response shapes, permission names, and Inertia props — the frontend engineer consumes these.
-
-The execution flow for each phase is:
-
-```
-Plan Phase
-    ├── Backend sub-phase → backend-engineer subagent
-    │     └── Returns: API contracts, changes, artifacts report
-    ├── Planner receives backend report
-    │     └── Extracts API contracts for frontend
-    └── Frontend sub-phase → frontend-engineer subagent
-          └── Receives: phase requirements + API contracts from backend
-```
-
-If a phase is **backend-only** or **frontend-only**, no splitting is needed — just assign it to the correct engineer.
-
 #### Passing API Contracts
 
-When the backend engineer subagent completes a phase, it returns a structured report including:
-
-- **Endpoints** — method, route, auth, request body, response shape, status codes.
-- **Inertia Props** — page name, prop types, shared data changes.
-- **Events & Side Effects** — event classes, payloads, triggers.
-- **Changes to Existing Code** — modified models, routes, configs.
-
-**The planner must extract the API contracts section from the backend report and pass it to the frontend engineer subagent.** Do not summarize or paraphrase — pass the contracts verbatim. The frontend engineer validates these contracts against the actual backend code before building.
+The planner extracts API contracts from the backend engineer's report and passes them verbatim to the frontend engineer. Do not summarize or paraphrase.
 
 ### Phase 4: Gap Analysis
 
 Once the plan is written, invoke the `gap-analysis` skill against it. Hand it the plan document, the relevant codebase areas, and any specs or requirements that informed the plan. The gap analysis skill will tear apart the plan from every angle — business requirements, technical completeness, functionality holes, testing coverage, and documentation.
 
-**This is not optional.** A plan without a gap analysis is a plan with unknown unknowns. The gap analysis skill is deliberately combative — it will fight for gaps it finds, and that's the point. Every gap it identifies should be either:
+A plan without a gap analysis is a plan with unknown unknowns. The gap analysis skill is deliberately combative — it will fight for gaps it finds, and that's the point. Every gap it identifies should be either:
 
 1. **Resolved** — addressed in the plan by adding/modifying phases, artifacts, or decisions.
 2. **Accepted as a known limitation** — documented in the "Out of Scope" section with an owner and rationale.
@@ -141,7 +112,7 @@ Update the plan document with the results. Critical and major gaps from the anal
 
 ### Phase 5: Code Review After Each Phase
 
-Every phase in the plan must include a code review step. This is not optional.
+Every phase in the plan must include a code review step.
 
 After each phase is implemented, **spawn a subagent using the `code-review` skill** to review the code changes from that phase. The subagent receives:
 
@@ -189,7 +160,7 @@ The `update-docs` skill will audit the package source code against its documenta
 - Removed functionality that docs still describe.
 - New configuration options or permissions that need documenting.
 
-**This is not optional.** Undocumented features are invisible features. Documentation that contradicts the code is worse than no documentation.
+Undocumented features are invisible features. Documentation that contradicts the code is worse than no documentation.
 
 ### Phase 7: Keep the Plan Current
 
@@ -295,47 +266,9 @@ After implementation (each engineer separately), run the `code-review` skill as 
 
 ### Phase 2: {Short description}
 
-**Engineer:** Backend
-{One sentence on what this phase adds on top of Phase 1.}
+**Engineer:** Backend | Frontend | Both
 
-#### Backend Artifacts
-
-| Type | Class | Path | Skill |
-|---|---|---|---|
-| Data Object | `AssetData` | `app/Domains/.../Data/` | `action` |
-| Action | `CreateAssetAction` | `app/Domains/.../Actions/` | `action` |
-| Form Request | `StoreAssetRequest` | `app/Domains/.../Requests/` | `form-request` |
-| Controller | `AssetController@create` | `app/Http/Controllers/.../` | `controller` |
-| Controller | `AssetController@store` | `app/Http/Controllers/.../` | `controller` |
-
-#### Backend Tests
-
-| Test | Location | Key Cases |
-|---|---|---|
-| `AssetDataTest` | `tests/Unit/.../Data/` | `fromStoreAssetRequest()` maps all fields, handles nullable fields |
-| `CreateAssetActionTest` | `tests/Feature/.../Actions/` | Creates asset with valid data, sets correct attributes |
-| `StoreAssetRequestTest` | `tests/Feature/.../Requests/` | Validates required fields, rejects invalid data, permission check |
-| `AssetControllerTest@store` | `tests/Feature/.../Controllers/` | Fakes `CreateAssetAction::fake()`, asserts called, redirects |
-
-#### Expected API Contracts
-
-```
-POST /assets
-  Auth: assets.create
-  Request: StoreAssetRequest
-  Request Body: { name: string (required), description: string (nullable), ... }
-  Response: redirect to Assets/Show
-  Status Codes: { 302: created, 403: unauthorized, 422: validation }
-
-Inertia Props (Assets/Create):
-  Props: { can: { createAsset: bool } }
-```
-
-#### Code Review
-
-After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address any blocking or major findings before committing.
-
-#### Commit: `Add asset creation with validation and authorization`
+_{Same structure as Phase 1. Omit Frontend Artifacts/Tests sections if backend-only.}_
 
 ---
 
@@ -361,8 +294,6 @@ Run the `update-docs` skill as a subagent against all files changed across all p
 - **Data layer before controller** — Form Requests → Data Objects → Actions → Resources → Controller wiring.
 - **Controller tests fake Actions** — use `::fake()` to isolate controller logic from business logic.
 - **Backend before frontend** — within any phase tagged "Both", the backend engineer runs first, returns API contracts, and only then does the frontend engineer begin. Never run them in parallel.
-- **Engineer assignment is explicit** — every phase is tagged `Backend`, `Frontend`, or `Both`. No phase is unassigned.
-- **API contracts bridge the gap** — the planner extracts API contracts from the backend engineer's report and passes them verbatim to the frontend engineer. No summarizing, no paraphrasing.
 
 ## Gaps
 
@@ -398,7 +329,3 @@ When assigning skills to tasks, use only skills that exist in `.claude/skills/` 
 - **Ground challenges in the codebase.** Read code and skills before claiming something is inconsistent. Don't guess.
 - **The plan is a living document.** Update it as things change. A stale plan is worse than no plan.
 - **If the user is right, say so and move on.** Being challenging doesn't mean being contrarian.
-- **Always run gap analysis before considering a plan complete.** A plan without a gap analysis is a rough draft, not a plan. Use the `gap-analysis` skill — don't skip it because the plan "looks good."
-- **Always run code review after each phase.** Every phase gets a `code-review` subagent pass before the commit. Blocking findings must be resolved before proceeding. This is not optional — a phase without a code review is a phase with unknown defects.
-- **Backend completes before frontend starts.** In phases tagged "Both", spawn the `backend-engineer` subagent first, receive its report (including API contracts), then spawn the `frontend-engineer` subagent with the contracts. Never run them in parallel — the frontend engineer depends on the backend engineer's output.
-- **Always run update-docs as the final step.** After all phases are implemented, invoke the `update-docs` skill as a subagent to sync documentation with the code changes. A plan is not complete until docs reflect reality.

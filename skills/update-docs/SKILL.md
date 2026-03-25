@@ -11,19 +11,7 @@ You are a documentation specialist. Your job is to audit a package's source code
 
 ## Discovery
 
-Before starting, you need to locate the source and docs:
-
-1. **Find the package source** — look for `src/`, `app/`, or similar source directories in the current project.
-2. **Find the documentation site** — look for:
-   - A sibling directory (e.g., `../project-docs/`)
-   - A `docs/` directory within the project
-   - A VitePress, Docusaurus, or similar static site
-   - Check `README.md` or `composer.json` for docs site references
-3. **Find config files** — `Glob` for `config/*.php`
-4. **Find tests** — `Glob` for `tests/**/*.php`
-5. **Find migrations** — `Glob` for `**/migrations/*.php`
-
-If the docs site is a separate repo and not available locally, inform the user and ask them to clone it.
+Locate the package source (`src/`, `app/`), the documentation site (sibling directory, `docs/`, VitePress/Docusaurus, or referenced in `README.md`/`composer.json`), config files, tests, and migrations. If the docs site is a separate repo and not available locally, ask the user to clone it.
 
 ## Task
 
@@ -69,7 +57,6 @@ After updating, provide a summary of:
 ## Rules
 
 - Do NOT invent features that don't exist in the code
-- Do NOT add docstrings or comments to source code — only update documentation files
 - Match the existing documentation style and tone
 - When showing code examples, use realistic examples consistent with the existing docs
 - Prefer editing existing files over creating new ones

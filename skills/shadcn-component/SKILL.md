@@ -43,11 +43,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 ```
 
-**Why both clsx and twMerge:**
-- `clsx` handles conditional classes: `clsx('base', false && 'hidden', className)`
-- `twMerge` resolves Tailwind conflicts: `twMerge('px-4', 'px-6')` → `'px-6'` (not `'px-4 px-6'`)
-- Together they ensure consumer `className` overrides work correctly.
-
 **Required packages:** `clsx`, `tailwind-merge`
 
 ## Component Templates
@@ -108,16 +103,12 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-primary text-primary-foreground shadow hover:bg-primary/90',
         destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
-        outline: 'border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground',
-        secondary: 'bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline',
+        // Add more variants as needed
       },
       size: {
         default: 'h-9 px-4 py-2',
         sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-10 rounded-md px-8',
-        icon: 'h-9 w-9',
+        // Add more sizes as needed
       },
     },
     defaultVariants: {
@@ -212,45 +203,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="card-title"
-      className={cn('font-semibold leading-none tracking-tight', className)}
-      {...props}
-    />
-  );
-}
-
-function CardDescription({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="card-description"
-      className={cn('text-sm text-muted-foreground', className)}
-      {...props}
-    />
-  );
-}
-
-function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="card-content"
-      className={cn('p-6 pt-0', className)}
-      {...props}
-    />
-  );
-}
-
-function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="card-footer"
-      className={cn('flex items-center p-6 pt-0', className)}
-      {...props}
-    />
-  );
-}
+// Repeat for CardTitle, CardDescription, CardContent, CardFooter — same pattern with different data-slot names and base classes.
 
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };
 ```
@@ -297,24 +250,11 @@ Input.displayName = 'Input';
 export { Input };
 ```
 
-**When to use forwardRef:**
-- Form inputs (Input, Textarea, Select triggers) — React Hook Form and other form libraries need refs.
-- Components that manage focus programmatically.
-- Components that wrap third-party libraries requiring a ref.
-
-**When NOT to use forwardRef:**
-- Simple display components (Badge, Card) — no ref needed.
-- Compound component wrappers (Card, CardHeader) — consumers use refs on the inner parts, not the wrapper.
+Use forwardRef for form inputs and components needing imperative ref access. Skip for simple display components (Badge, Card).
 
 ### Component with Internal Context
 
-For complex components that need shared state across compound parts, follow the context + provider pattern from the `ts-package` skill:
-
-1. Create a context with `createContext<ContextValue | null>(null)`
-2. Create a consumer hook that throws if context is null
-3. Create a provider component that holds state and memoizes the context value
-4. Each compound part reads from context via the consumer hook
-5. Use `data-state` attributes to expose state for CSS styling
+For components needing shared state across compound parts, follow the context + provider pattern from the `ts-package` skill.
 
 ## CVA Patterns
 
@@ -345,32 +285,11 @@ function Button({ asChild = false, ...props }) {
 </Button>
 ```
 
-**When to support `asChild`:**
-- Interactive components that might need to render as a different element (Button → Link, Button → anchor).
-- Trigger components in Radix compound patterns.
-
-**When NOT to support `asChild`:**
-- Display-only components (Badge, Card, CardContent).
-- Components where changing the root element doesn't make sense.
+Support `asChild` on interactive components that may render as a different element. Skip for display-only components.
 
 ## `data-slot` Convention
 
-Every component part gets a `data-slot` attribute matching its semantic role:
-
-```typescript
-<div data-slot="card" />
-<div data-slot="card-header" />
-<div data-slot="card-title" />
-<div data-slot="card-content" />
-<div data-slot="card-footer" />
-```
-
-**Purpose:**
-- CSS targeting: `[data-slot="card-header"] { ... }` for parent-aware styling.
-- Debugging: instantly identify component parts in DevTools.
-- Testing: fallback query target when no accessible role exists (prefer role queries first).
-
-**Naming:** kebab-case, matching the component name in lowercase.
+Every component part gets `data-slot` (kebab-case, matching component name). Used for CSS targeting, DevTools debugging, and test queries. Prefer role queries first.
 
 ## Radix Data Attributes
 
@@ -448,17 +367,6 @@ components/ui/
     data-grid-row.tsx
     index.ts           # Barrel export
 ```
-
-## Component Conventions Summary
-
-1. **Props type** — `React.ComponentProps<'element'>` or `React.ComponentProps<typeof RadixPrimitive.Part>`. Intersect with `VariantProps<>` and custom props.
-2. **Destructure `className` first** — always extract it before the spread so `cn()` can merge it.
-3. **Spread remaining props last** — `{...props}` on the root element passes through all native attributes.
-4. **`data-slot` on every part** — kebab-case name matching the component.
-5. **Named exports only** — `export { Button, buttonVariants }`. No default exports.
-6. **`displayName` on forwardRef** — required for DevTools and error messages.
-7. **Semantic color tokens** — use `bg-primary`, `text-muted-foreground`, etc. Never hardcode colors.
-8. **Radix data attributes for state** — `data-[state=open]:...` instead of conditional classes.
 
 ## Checklist
 

@@ -17,23 +17,6 @@ You help create Laravel controllers that follow a strict separation of concerns:
 4. **Every response uses a JsonResource** — use `::make()` for singular, `::collection()` for lists. Never pass raw models.
 5. **Read endpoints (index, show, edit, create) do not use Actions** — index queries directly, show/edit use route model binding, create renders a form.
 
-## What Belongs in a Controller (Application Logic)
-
-- Receiving and forwarding the request
-- Calling an Action with validated data (for store/update/destroy)
-- Building index queries (pagination, eager loading)
-- Wrapping results in a Resource
-- Returning an Inertia page or redirect
-- Passing `can` permission checks to the frontend
-
-## What Does NOT Belong in a Controller (Business Logic)
-
-- Complex conditional queries or business-rule filtering (move to Action or model scope)
-- Model creation/updates/deletes (move to Action)
-- Conditional logic based on domain rules (move to Action)
-- Data transformation beyond what the Resource handles (move to Data object)
-- Sending notifications, dispatching events (move to Action)
-
 ## Discovery
 
 Before creating a Controller, scan the project to understand conventions:
@@ -135,29 +118,6 @@ class AssetController extends Controller
 }
 ```
 
-## Controller Method Patterns
-
-Each method in the CRUD template above follows a specific pattern:
-
-- **index** — query directly with eager loading + pagination, no Action. Use model scopes for complex filtering.
-- **show** — route model binding, `$asset->load([...])` for eager loading, wrap in Resource.
-- **create/edit** — render a form. Pass dropdown data via Resources if needed (e.g., `AssetCategoryResource::collection(AssetCategory::all())`).
-- **store/update** — map request to Data object via `from*` method, delegate to Action, redirect.
-- **destroy** — delegate to Action, redirect to index.
-
-## Passing Permissions to the Frontend
-
-Use `Gate::allows()` with Spatie permission strings to build a `can` array. Only include permissions the page actually uses:
-
-```php
-return Inertia::render('assets/index', [
-    'assets' => AssetResource::collection($assets),
-    'can' => [
-        'create' => Gate::allows('assets:create'),
-    ],
-]);
-```
-
 ## API Controllers
 
 For endpoints that return JSON instead of Inertia pages, return Resources directly:
@@ -178,8 +138,6 @@ public function index(IndexAssetRequest $request): \Illuminate\Http\Resources\Js
 }
 ```
 
-**Anti-pattern:** Inline validation (`$request->validate()`), direct model creation (`new Model`), event dispatching, and notification sending in controllers. All of these belong in Form Requests and Actions respectively.
-
 ## Naming Conventions
 
 | Thing | Pattern | Example |
@@ -191,11 +149,10 @@ public function index(IndexAssetRequest $request): \Illuminate\Http\Resources\Js
 
 When creating a Controller:
 
-1. **Create a dedicated Form Request for every method** — never use `Request` directly
+1. **Ensure corresponding Form Requests, Actions, and Resources exist** (see form-request, action, resource skills)
 2. **Delegate write operations to Actions** — store, update, destroy call `Action::make()->handle()`
 3. **Read methods use route model binding or direct queries** — no Actions for index, show, create, edit
 4. **Return all data through Resources** — `::make()` for singular, `::collection()` for lists, never raw models
 5. **Use Data objects for store/update** — map from the Form Request via a static `from*` method
 6. **Pass a `can` array** with only the Gate permissions the page needs
-7. **No inline model manipulation, no event dispatching** — that's the Action's job
-8. **Keep methods short** — most should be 3-8 lines of actual logic
+7. **Keep methods short** — most should be 3-8 lines of actual logic

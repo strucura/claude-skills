@@ -7,8 +7,6 @@ allowed-tools: Read, Grep, Glob, Edit, Write, Bash(php artisan widget:register*)
 
 # Chart Skill
 
-You help create and manage Charts powered by the `strucura/charts` package.
-
 ## Architecture Overview
 
 Charts provide data visualization with support for bar, line, area, and pie chart types.
@@ -38,11 +36,8 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Strucura\Charts\Abstracts\Chart;
-use Strucura\Charts\Datasets\Bar;
-use Strucura\Charts\Datasets\Line;
-use Strucura\Charts\Datasets\Area;
+use Strucura\Charts\Datasets\Line; // Also: Bar, Area
 use Strucura\Charts\Labels\Label;
-use Strucura\Visualizations\FloatingFilters\DateRange;
 
 class {Name}Chart extends Chart implements ShouldRegisterAsWidget
 {
@@ -89,14 +84,9 @@ class {Name}Chart extends Chart implements ShouldRegisterAsWidget
 ## Common Label Patterns
 
 ```php
-// Monthly grouping
-Label::make("DATE_FORMAT(table.created_at, '%Y-%m')", 'month')->header('Month');
-
-// Daily grouping
-Label::make("DATE(table.created_at)", 'day')->header('Day');
-
-// Category grouping
-Label::make("table.category", 'category')->header('Category');
+Label::make("DATE_FORMAT(table.created_at, '%Y-%m')", 'month')->header('Month');  // Monthly
+Label::make("DATE(table.created_at)", 'day')->header('Day');                       // Daily
+Label::make("table.category", 'category')->header('Category');                     // Category
 ```
 
 ## Optional: Floating Filters
@@ -123,17 +113,6 @@ public function getChartKey(): string
 public function getRoutePath(): string
 {
     return 'charts/{custom-path}';
-}
-```
-
-## Chart Schema (returned by `/schema` endpoint)
-
-```typescript
-interface ChartSchema {
-    chart_key: string;
-    label: { field: string; header: string; meta: Record<string, unknown> };
-    datasets: { field: string; header: string; type: 'bar'|'line'|'area'|'pie'; meta: Record<string, unknown> }[];
-    floating_filters: DataGridFloatingFilter[];
 }
 ```
 

@@ -96,12 +96,6 @@ public function toArray(Request $request): array
 
         // Only include when explicitly requested
         'secret_key' => $this->when($request->user()?->isAdmin(), $this->secret_key),
-
-        // Include a computed value only when a related model is loaded
-        'total_value' => $this->when(
-            $this->relationLoaded('items'),
-            fn () => $this->items->sum('value'),
-        ),
     ];
 }
 ```
@@ -119,44 +113,7 @@ Only create a dedicated `ResourceCollection` class when you need custom meta or 
 
 ## Best Practices
 
-### Always Use Static Constructors
-
-```php
-// Good
-AssetResource::make($asset);
-AssetResource::collection($assets);
-
-// Bad — never use new
-new AssetResource($asset);
-```
-
-### Always Use `whenLoaded()` for Relationships
-
-Never access a relationship directly — use `whenLoaded()` to avoid N+1 queries when the relationship wasn't eager-loaded:
-
-```php
-// Good
-'owner' => UserResource::make($this->whenLoaded('owner')),
-
-// Bad — triggers a query if not eager-loaded
-'owner' => UserResource::make($this->owner),
-```
-
-### Explicitly List Every Field
-
-Never use `parent::toArray()` or `$this->resource->toArray()`. Always list fields explicitly so the response shape is predictable and sensitive fields are never accidentally exposed:
-
-```php
-// Good — explicit, safe
-return [
-    'id' => $this->id,
-    'name' => $this->name,
-    'email' => $this->email,
-];
-
-// Bad — leaks whatever is on the model
-return parent::toArray($request);
-```
+**Avoid:** Never use `new`, never access relationships without `whenLoaded()`, never use `parent::toArray()`, never pass raw related models.
 
 ### Use Consistent Key Naming
 
@@ -173,58 +130,11 @@ return [
 
 ### Date Formatting Conventions
 
-Follow Laravel's column naming conventions for date formatting:
-
-- **`_at` columns** (datetime/timestamp) — return ISO 8601 via `->toAtomString()`:
-  ```php
-  'created_at' => $this->created_at?->toAtomString(),
-  'updated_at' => $this->updated_at?->toAtomString(),
-  'purchased_at' => $this->purchased_at?->toAtomString(),
-  ```
-
-- **`_on` columns** (date only, no time) — return `Y-m-d` via `->format('Y-m-d')`:
-  ```php
-  'expires_on' => $this->expires_on?->format('Y-m-d'),
-  'due_on' => $this->due_on?->format('Y-m-d'),
-  ```
-
-Carbon's `toAtomString()` uses `DateTime::ATOM` format (`Y-m-d\TH:i:sP`), which produces proper ISO 8601 with timezone offset (e.g., `2026-03-19T14:30:00+00:00`). This is the preferred method.
-
-Human-readable formatting (e.g., `diffForHumans()`, `format('M j, Y')`) belongs in the **frontend**, not the Resource. Resources return machine-readable values.
-
-### Nest Resources for Relationships
-
-Always wrap related models in their own Resource class:
-
-```php
-// Good — the related model's shape is controlled by its own Resource
-'category' => AssetCategoryResource::make($this->whenLoaded('category')),
-'tags' => TagResource::collection($this->whenLoaded('tags')),
-
-// Bad — raw model leaks all attributes
-'category' => $this->whenLoaded('category'),
-```
-
-### Keep Resources Free of Logic
-
-Resources transform data — they do not compute, query, or mutate:
-
-```php
-// Good — simple attribute mapping
-'is_overdue' => $this->is_overdue,  // accessor on the model
-
-// Bad — business logic in the resource
-'is_overdue' => $this->due_on < now() && $this->status !== 'complete',
-```
-
-Move computed values to model accessors or action classes.
+Use `->toAtomString()` for `_at` columns, `->format('Y-m-d')` for `_on` columns.
 
 ## Naming Conventions
 
-| Thing | Pattern | Example |
-|---|---|---|
-| Resource | `{Model}Resource` | `AssetResource` |
-| Collection | `{Model}Collection` | `AssetCollection` (only when needed) |
+Name resources `{Model}Resource`. Only create `{Model}Collection` when custom collection meta is needed.
 
 ## Checklist
 

@@ -82,37 +82,9 @@ describe('calculateTotal', () => {
 
 ### Structure Conventions
 
-1. **One `describe` per export** — matches the module's public API surface.
-2. **`it` strings start with a verb** — "returns", "throws", "calls", "sets", "emits".
-3. **Arrange → Act → Assert** — blank lines separate the three phases when the test is more than a one-liner.
-4. **No nesting beyond two levels** — `describe` > `it`. Use a second `describe` inside for method grouping on classes, not for conditional branching.
+1. **No nesting beyond two levels** — `describe` > `it`. Use a second `describe` inside for method grouping on classes, not for conditional branching.
 
 ## Testing Patterns
-
-### Pure Functions
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { slugify } from './slugify';
-
-describe('slugify', () => {
-  it('converts spaces to hyphens', () => {
-    expect(slugify('hello world')).toBe('hello-world');
-  });
-
-  it('lowercases the string', () => {
-    expect(slugify('Hello World')).toBe('hello-world');
-  });
-
-  it('strips non-alphanumeric characters', () => {
-    expect(slugify('Hello, World!')).toBe('hello-world');
-  });
-
-  it('handles empty strings', () => {
-    expect(slugify('')).toBe('');
-  });
-});
-```
 
 ### Classes
 
@@ -134,25 +106,6 @@ describe('EventEmitter', () => {
       emitter.emit('test');
 
       expect(listener).toHaveBeenCalledOnce();
-    });
-
-    it('passes event data to the listener', () => {
-      const listener = vi.fn();
-      emitter.on('test', listener);
-      emitter.emit('test', { id: 1 });
-
-      expect(listener).toHaveBeenCalledWith({ id: 1 });
-    });
-  });
-
-  describe('off', () => {
-    it('removes a listener', () => {
-      const listener = vi.fn();
-      emitter.on('test', listener);
-      emitter.off('test', listener);
-      emitter.emit('test');
-
-      expect(listener).not.toHaveBeenCalled();
     });
   });
 });
@@ -203,37 +156,6 @@ describe('isValidEmail', () => {
 });
 ```
 
-Use `describe.each` when the same group of tests applies to multiple configurations:
-
-```typescript
-describe.each([
-  { env: 'development', debug: true },
-  { env: 'production', debug: false },
-])('in $env environment', ({ env, debug }) => {
-  it(`sets debug to ${debug}`, () => {
-    const config = createConfig({ environment: env });
-    expect(config.debug).toBe(debug);
-  });
-});
-```
-
-### Error and Exception Testing
-
-```typescript
-describe('parseConfig', () => {
-  it('throws on invalid JSON', () => {
-    expect(() => parseConfig('not json')).toThrow(SyntaxError);
-  });
-
-  it('throws with a descriptive message for missing required fields', () => {
-    expect(() => parseConfig('{}')).toThrow('Missing required field: name');
-  });
-
-  it('rejects invalid config asynchronously', async () => {
-    await expect(loadConfig('/bad/path')).rejects.toThrow('File not found');
-  });
-});
-```
 
 ## Mocking
 
@@ -301,11 +223,7 @@ it('calls storage.setItem', () => {
 ### Mocking Conventions
 
 1. **Mock at the boundary** — mock external dependencies (API clients, storage, timers), not internal functions.
-2. **Use `vi.fn()` for callbacks** — when you need to verify a function was called correctly.
-3. **Use `vi.mock()` for modules** — when you need to replace an entire dependency.
-4. **Use `vi.spyOn()` for observation** — when you want to watch a method without replacing it (or replace it temporarily).
-5. **Always `mockRestore()` spies** — or use `afterEach(() => vi.restoreAllMocks())` globally.
-6. **Prefer `mockResolvedValue` / `mockRejectedValue`** over `mockImplementation` for async mocks.
+2. **Always `mockRestore()` spies** — or use `afterEach(() => vi.restoreAllMocks())` globally.
 
 ## Timers
 
@@ -352,37 +270,11 @@ describe('debounce', () => {
 
 ## Jest Compatibility
 
-When working with an existing Jest setup, the API is nearly identical. Key differences:
-
-| Vitest | Jest |
-|---|---|
-| `import { vi } from 'vitest'` | `jest` global |
-| `vi.fn()` | `jest.fn()` |
-| `vi.mock()` | `jest.mock()` |
-| `vi.spyOn()` | `jest.spyOn()` |
-| `vi.useFakeTimers()` | `jest.useFakeTimers()` |
-| `vi.advanceTimersByTime()` | `jest.advanceTimersByTime()` |
-| `toHaveBeenCalledOnce()` | `toHaveBeenCalledTimes(1)` |
-
-If the project uses Jest, follow the same patterns from this skill but substitute the Jest equivalents. Do not migrate a project from Jest to Vitest unless explicitly asked.
-
-## What This Skill Does NOT Cover
-
-- **React component rendering** → use `react-test` skill
-- **React hook testing with `renderHook`** → use `react-test` skill
-- **User interaction simulation** → use `react-test` skill
-- **End-to-end or integration tests** → use Playwright or similar (manual)
-- **Laravel/PHP tests** → use the testing patterns in the `action` and `controller` skills
+For Jest projects, substitute `jest` for `vi` (e.g., `jest.fn()`, `jest.mock()`). Use `toHaveBeenCalledTimes(1)` instead of `toHaveBeenCalledOnce()`. Do not migrate from Jest to Vitest unless explicitly asked.
 
 ## Checklist
 
-When creating tests:
-
-1. **Read the module under test** — understand all exports, parameters, return types, and error conditions
-2. **Identify the test runner** — Vitest or Jest, and match the project's existing configuration
-3. **Create the test file** — collocated next to the module, matching the naming convention
-4. **Write the happy path first** — the most common, expected usage
-5. **Add edge cases** — empty inputs, boundaries, null/undefined, type coercion traps
-6. **Add error cases** — invalid inputs, thrown exceptions, rejected promises
-7. **Add mocks only at boundaries** — external dependencies, timers, storage, network
-8. **Run the tests** — `npm run test` or `npx vitest run {file}` to verify they pass
+1. **Identify the test runner** — Vitest or Jest, match existing configuration
+2. **Write the happy path first** — the most common, expected usage
+3. **Add edge and error cases** — empty inputs, boundaries, thrown exceptions, rejected promises
+4. **Run the tests** — `npm run test` or `npx vitest run {file}` to verify they pass

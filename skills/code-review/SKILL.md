@@ -57,10 +57,7 @@ For each abstraction opportunity:
 - **Justify it** — explain why the duplication is harmful (inconsistency risk, maintenance burden, bug propagation) rather than just aesthetically displeasing.
 - **Warn against premature abstraction** — if the duplication exists in only two places and the code is simple, explicitly say so and recommend leaving it until a third instance appears.
 
-Do NOT suggest abstractions for:
-- Code that is superficially similar but semantically different.
-- One-time patterns that are unlikely to recur.
-- Simple code where the abstraction would be more complex than the duplication.
+Do NOT suggest abstractions for superficially similar but semantically different code, one-time patterns, or simple code where the abstraction would be more complex than the duplication.
 
 ### Step 4: Faulty Logic Detection
 
@@ -156,11 +153,9 @@ Examine the changed code for logic errors:
 
 ## Rules
 
-- **Only review changed code.** Unchanged files are out of scope. Period.
+- **Only review changed code.** Unchanged files are out of scope.
 - **Every finding needs file paths and line numbers.** No vague observations.
-- **Do not suggest style changes.** Naming conventions, comment style, formatting — these are not your concern.
-- **Do not suggest adding error handling "just in case."** Only flag missing error handling when a concrete failure scenario exists.
-- **Do not suggest adding types, docblocks, or annotations.** Unless a type error causes faulty logic, types are not your concern.
-- **Premature abstraction is worse than duplication.** When in doubt, recommend waiting for more evidence before abstracting.
-- **Faulty logic findings must be provable.** "This might cause an issue" is not a finding. "This will return null because X" is a finding.
-- **If you find nothing, say so.** An empty review is a valid review. Do not manufacture findings to justify your existence.
+- **Do not suggest style changes, error handling "just in case", or adding types/docblocks.** Only flag these when they cause concrete logic errors.
+- **Premature abstraction is worse than duplication.** When in doubt, wait for a third instance.
+- **Findings must be provable.** "This might cause an issue" is not a finding. "This will return null because X" is.
+- **If you find nothing, say so.** An empty review is valid.

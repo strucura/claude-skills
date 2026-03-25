@@ -26,12 +26,7 @@ Before creating an Action, scan the project to understand the conventions in use
 
 ## The CanMakeOrFake Trait
 
-This trait MUST be used on every Action class. It provides two static methods:
-
-- `::make()` — resolves the Action from the Laravel container (enables dependency injection)
-- `::fake(?Closure $callback = null)` — replaces the Action with a mock in the container (for testing)
-
-If the trait doesn't exist in the project, create it at the conventional location (typically `app/Concerns/CanMakeOrFake.php` or similar):
+This trait MUST be used on every Action class. If the trait doesn't exist in the project, create it at the conventional location (typically `app/Concerns/CanMakeOrFake.php` or similar):
 
 ```php
 <?php
@@ -63,11 +58,6 @@ trait CanMakeOrFake
     }
 }
 ```
-
-### Why CanMakeOrFake
-
-- **`::make()`** — Always resolve actions through the container so constructor dependencies are injected. Never `new` an Action directly in application code.
-- **`::fake()`** — Swap the real action for a Mockery mock in the container. Any code that calls `::make()` will get the mock instead. This isolates the code under test from the action's implementation.
 
 ## Creating an Action — Simple Parameters
 
@@ -151,7 +141,6 @@ Data objects are plain PHP classes with `readonly` promoted constructor properti
 namespace App\Domains\{Domain}\{SubDomain}\Data;
 
 use App\Domains\{Domain}\{SubDomain}\Requests\Store{Model}Request;
-use App\Domains\{Domain}\{SubDomain}\Requests\Update{Model}Request;
 use Carbon\CarbonImmutable;
 
 class {Name}Data
@@ -177,18 +166,7 @@ class {Name}Data
         );
     }
 
-    public static function fromUpdateAssetRequest(UpdateAssetRequest $request): self
-    {
-        return new self(
-            name: $request->validated('name'),
-            description: $request->validated('description'),
-            status: $request->validated('status'),
-            assignedTo: $request->validated('assigned_to'),
-            purchasedAt: $request->validated('purchased_at')
-                ? CarbonImmutable::parse($request->validated('purchased_at'))
-                : null,
-        );
-    }
+    // Add additional `from*` methods following the same pattern.
 }
 ```
 
@@ -212,13 +190,6 @@ Type-hint the specific request class — not the generic `FormRequest` or `Reque
 Actions resolved via `::make()` support constructor injection:
 
 ```php
-<?php
-
-namespace App\Domains\Application\Assets\Actions;
-
-use App\Concerns\CanMakeOrFake;
-use App\Domains\Application\Assets\Data\AssetData;
-
 class CreateAssetAction
 {
     use CanMakeOrFake;
@@ -226,15 +197,6 @@ class CreateAssetAction
     public function __construct(
         private readonly AssetNumberGenerator $generator,
     ) {}
-
-    public function handle(AssetData $data): Asset
-    {
-        return Asset::create([
-            'asset_number' => $this->generator->next(),
-            'name' => $data->name,
-            'description' => $data->description,
-        ]);
-    }
 }
 ```
 
@@ -245,9 +207,6 @@ class CreateAssetAction
 Test the action's `handle()` method by constructing a Data object (or passing parameters) directly:
 
 ```php
-use App\Domains\Application\Assets\Actions\CreateAssetAction;
-use App\Domains\Application\Assets\Data\AssetData;
-
 it('creates an asset', function () {
     $data = new AssetData(
         name: 'Laptop',
@@ -259,10 +218,7 @@ it('creates an asset', function () {
 
     $asset = CreateAssetAction::make()->handle($data);
 
-    expect($asset)
-        ->name->toBe('Laptop')
-        ->description->toBe('Work laptop')
-        ->status->toBe('active');
+    expect($asset)->name->toBe('Laptop')->status->toBe('active');
 });
 ```
 
@@ -298,29 +254,18 @@ Other `::fake()` patterns:
 
 ### Testing a Data Object's Factory Methods
 
-Test `from*` methods to verify mapping logic:
-
 ```php
-use App\Domains\Application\Assets\Data\AssetData;
-use App\Domains\Application\Assets\Requests\StoreAssetRequest;
-
 it('creates data from a store request', function () {
     $request = StoreAssetRequest::create('/assets', 'POST', [
         'name' => 'Laptop',
         'description' => 'Work laptop',
         'status' => 'active',
         'assigned_to' => 42,
-        'purchased_at' => '2026-01-15',
     ]);
 
     $data = AssetData::fromStoreAssetRequest($request);
 
-    expect($data)
-        ->name->toBe('Laptop')
-        ->description->toBe('Work laptop')
-        ->status->toBe('active')
-        ->assignedTo->toBe(42)
-        ->purchasedAt->toDateString()->toBe('2026-01-15');
+    expect($data)->name->toBe('Laptop')->assignedTo->toBe(42);
 });
 ```
 
@@ -328,11 +273,8 @@ it('creates data from a store request', function () {
 
 | Scenario | Approach |
 |---|---|
-| 1–3 simple scalar arguments | Simple parameters on `handle()` |
-| 4+ arguments | Data object |
-| Same data from multiple sources (request, job, event) | Data object with multiple `from*` methods |
-| Complex/nested data | Data object |
-| Arguments include only a model and 1–2 scalars | Simple parameters on `handle()` |
+| ≤3 simple args | Simple parameters on `handle()` |
+| >3 or multi-source | Data object with `from*` methods |
 
 ## Naming Conventions
 

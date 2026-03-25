@@ -7,8 +7,6 @@ allowed-tools: Read, Grep, Glob, Edit, Write, Bash(php artisan widget:register*)
 
 # DataGrid Skill
 
-You help create and manage DataGrids powered by the `strucura/datagrids` package.
-
 ## Architecture Overview
 
 DataGrids provide tabular data with filtering, sorting, pagination, and inline/bulk actions.
@@ -38,9 +36,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Strucura\DataGrid\Abstracts\DataGrid;
-use Strucura\DataGrid\Columns\DateTime;
-use Strucura\DataGrid\Columns\Number;
-use Strucura\DataGrid\Columns\Text;
+use Strucura\DataGrid\Columns\Number; // Also: Text, DateTime
 
 class {Name}DataGrid extends DataGrid implements ShouldRegisterAsWidget
 {
@@ -156,34 +152,8 @@ Number::make(
 ```
 
 ### Scoped Queries (user-level access control)
-```php
-public function getQuery(): Builder
-{
-    $user = auth()->user();
-    return DB::table('items')
-        ->where(function ($q) use ($user) {
-            $q->where('items.user_id', $user->id)
-                ->orWhereExists(function ($sub) use ($user) {
-                    $sub->from('item_shares')
-                        ->whereColumn('item_shares.item_id', 'items.id')
-                        ->where('item_shares.shared_with_user_id', $user->id);
-                });
-        });
-}
-```
 
-## DataGrid Schema (returned by `/schema` endpoint)
-
-```typescript
-interface DataGridSchema {
-    grid_key: string;
-    columns: DataGridColumn[];
-    floating_filters: DataGridFloatingFilter[];
-    default_sorts: Sort[];
-    bulk_actions: DataGridAction[];
-    inline_actions: DataGridAction[];
-}
-```
+Add `where` clauses to `getQuery()` to scope results to the authenticated user (e.g., `->where('items.user_id', auth()->id())`).
 
 ## Registration Checklist
 

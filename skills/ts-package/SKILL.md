@@ -192,10 +192,7 @@ export default defineConfig({
 });
 ```
 
-**Notes:**
-- Use `environment: 'jsdom'` for packages with React/DOM code.
-- Use `environment: 'node'` for pure utility packages with no DOM dependency.
-- `globals: true` makes `describe`, `it`, `expect` available without imports.
+Use `environment: 'node'` for pure utility packages with no DOM dependency.
 
 ### src/test-setup.ts
 
@@ -203,7 +200,7 @@ export default defineConfig({
 import '@testing-library/jest-dom/vitest';
 ```
 
-This registers matchers like `toBeInTheDocument()`, `toHaveTextContent()`, etc. Only needed for packages with React/DOM code.
+Only needed for packages with React/DOM code.
 
 ### src/index.ts — Barrel Exports
 
@@ -257,82 +254,25 @@ export function useToggle(initialValue = false): UseToggleReturn {
 
 ### Generic Hook with Options
 
-```typescript
-import { useState, useEffect, useCallback, type Dispatch, type SetStateAction } from 'react';
-
-export interface UseLocalStorageOptions<T> {
-  serializer?: (value: T) => string;
-  deserializer?: (value: string) => T;
-}
-
-export function useLocalStorage<T>(
-  key: string,
-  initialValue: T,
-  options?: UseLocalStorageOptions<T>,
-): [T, Dispatch<SetStateAction<T>>] {
-  const serialize = options?.serializer ?? JSON.stringify;
-  const deserialize = options?.deserializer ?? JSON.parse;
-
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      return item !== null ? deserialize(item) : initialValue;
-    } catch {
-      return initialValue;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(key, serialize(storedValue));
-    } catch {
-      // Storage full or unavailable — fail silently
-    }
-  }, [key, storedValue, serialize]);
-
-  return [storedValue, setStoredValue];
-}
-```
+For hooks with configuration, accept a single options object. Use generic type parameters on the function. Return a tuple `[value, setter]` or a named interface for object returns.
 
 ### Hook with Cleanup
 
-```typescript
-import { useEffect, useRef } from 'react';
-
-export function useInterval(callback: () => void, delay: number | null): void {
-  const savedCallback = useRef(callback);
-
-  useEffect(() => {
-    savedCallback.current = callback;
-  }, [callback]);
-
-  useEffect(() => {
-    if (delay === null) return;
-
-    const id = setInterval(() => savedCallback.current(), delay);
-    return () => clearInterval(id);
-  }, [delay]);
-}
-```
+For hooks with side effects, store the latest callback in a `useRef` and clean up in the `useEffect` return.
 
 ### Hook Conventions
 
-1. **Name starts with `use`** — always. No exceptions.
-2. **Return type is explicit** — define an interface for object returns, a tuple type for array returns.
-3. **Options are a single object** — not multiple optional parameters. This is more extensible.
-4. **Use `useCallback` for returned functions** — prevents unnecessary re-renders in consumers.
-5. **Use `useRef` for mutable values that shouldn't trigger re-renders** — like the latest callback in `useInterval`.
-6. **Generic type parameters go on the function** — `useLocalStorage<T>(key, initialValue)` not `useLocalStorage(key, initialValue as T)`.
+1. **Return type is explicit** — define an interface for object returns, a tuple type for array returns.
+2. **Options are a single object** — not multiple optional parameters.
+3. **Use `useCallback` for returned functions** — prevents unnecessary re-renders in consumers.
+4. **Use `useRef` for mutable values that shouldn't trigger re-renders.**
+5. **Generic type parameters go on the function** — `useLocalStorage<T>(key, initialValue)`.
 
 ## Context + Provider Pattern
 
 ### Template
 
-Each context file contains three parts in one file:
-
-1. **Context** — `createContext<ContextValue | null>(null)`
-2. **Provider** — holds state, memoizes the context value via `useMemo`, renders `<Context.Provider>`
-3. **Consumer hook** — `useContext()` with null check that throws if used outside provider
+Each context file contains three parts: context creation, provider component, and consumer hook.
 
 ```typescript
 const XContext = createContext<XContextValue | null>(null);

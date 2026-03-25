@@ -130,51 +130,14 @@ describe('LoginForm', () => {
     });
   });
 
-  it('shows a validation error for empty email', async () => {
-    const user = userEvent.setup();
-    render(<LoginForm onSubmit={vi.fn()} />);
-
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
-
-    expect(screen.getByRole('alert')).toHaveTextContent(/email is required/i);
-  });
-
-  it('disables the submit button while submitting', async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn(() => new Promise(() => {})); // never resolves
-    render(<LoginForm onSubmit={onSubmit} />);
-
-    await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'secret123');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
-
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeDisabled();
-  });
+  // Also test: validation errors (submit without filling fields, assert role='alert'),
+  // disabled state during submission (assert toBeDisabled())
 });
 ```
 
 ## Query Priority
 
-Use queries in this priority order. Higher priority = more accessible, more resilient to implementation changes:
-
-| Priority | Query | When to use |
-|---|---|---|
-| 1 | `getByRole` | Buttons, links, headings, form controls, regions — anything with an ARIA role |
-| 2 | `getByLabelText` | Form inputs with associated labels |
-| 3 | `getByPlaceholderText` | Inputs without visible labels (rare, prefer labels) |
-| 4 | `getByText` | Non-interactive text content |
-| 5 | `getByDisplayValue` | Current value of form elements |
-| 6 | `getByAltText` | Images |
-| 7 | `getByTitle` | Elements with title attributes |
-| 8 | `getByTestId` | Last resort — when no accessible query works |
-
-### Query Variants
-
-| Variant | Returns | Throws? | Use when |
-|---|---|---|---|
-| `getBy*` | Element | Yes, if not found | Element should be present |
-| `queryBy*` | Element or `null` | No | Asserting element is NOT present |
-| `findBy*` | Promise\<Element\> | Yes, if not found after timeout | Element appears asynchronously |
+Query by role > label > text > testId. Use `getBy*` (present), `queryBy*` (absent), `findBy*` (async).
 
 ```typescript
 // Element IS present
@@ -213,15 +176,6 @@ describe('useToggle', () => {
     expect(result.current.value).toBe(true);
   });
 
-  it('sets to true', () => {
-    const { result } = renderHook(() => useToggle(false));
-
-    act(() => {
-      result.current.setTrue();
-    });
-
-    expect(result.current.value).toBe(true);
-  });
 });
 ```
 
@@ -234,21 +188,7 @@ describe('useToggle', () => {
 
 ## Context / Provider Testing
 
-Create a `TestConsumer` component that reads from context, then test the provider's behavior through it:
-
-```typescript
-function TestConsumer() {
-  const { config, setPageSize } = useDataGridContext();
-  return (
-    <div>
-      <span data-testid="page-size">{config.pageSize}</span>
-      <button onClick={() => setPageSize(50)}>Set 50</button>
-    </div>
-  );
-}
-```
-
-Test patterns for providers:
+Create a TestConsumer that reads from context and renders values for assertion. Test patterns for providers:
 - **Default values** — render with provider, assert defaults appear
 - **State updates** — interact with consumer, assert context updates
 - **Custom initial values** — pass props to provider, assert consumer reads them
@@ -371,8 +311,6 @@ it('manages focus on modal open', async () => {
 
 ## Testing shadcn & Radix Components
 
-shadcn components have specific testing considerations due to CVA variants, Radix primitive behavior, compound component composition, and the `asChild`/Slot pattern.
-
 ### Testing CVA Variant Output
 
 Verify that each variant applies the correct classes. Import the CVA function directly — don't render the component just to check classes:
@@ -395,18 +333,7 @@ describe('buttonVariants', () => {
     expect(classes).toContain('bg-destructive');
   });
 
-  it('applies size classes', () => {
-    const classes = buttonVariants({ size: 'sm' });
-
-    expect(classes).toContain('h-8');
-    expect(classes).toContain('text-xs');
-  });
-
-  it('merges custom className', () => {
-    const classes = buttonVariants({ className: 'custom-class' });
-
-    expect(classes).toContain('custom-class');
-  });
+  // Test each variant/size combination similarly.
 });
 ```
 
@@ -447,11 +374,7 @@ When a component part has no accessible role, fall back to `container.querySelec
 ## What This Skill Does NOT Cover
 
 - **Pure TypeScript unit tests** (no rendering) → use `ts-test` skill
-- **CVA variant function unit tests** (no rendering) → use `ts-test` skill
 - **Creating shadcn components** → use `shadcn-component` skill
-- **Inertia page/layout creation** → use `ts-inertia` skill
-- **End-to-end browser testing** → use Playwright (manual)
-- **Visual regression testing** → use Storybook + Chromatic (manual)
 
 ## Checklist
 

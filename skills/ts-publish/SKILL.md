@@ -72,78 +72,11 @@ Add `repository` (with `directory` for monorepos), `homepage`, `bugs`, `keywords
 
 ### Subpath Exports
 
-For packages with multiple entry points:
-
-```json
-{
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    },
-    "./utils": {
-      "import": {
-        "types": "./dist/utils.d.ts",
-        "default": "./dist/utils.js"
-      },
-      "require": {
-        "types": "./dist/utils.d.cts",
-        "default": "./dist/utils.cjs"
-      }
-    }
-  }
-}
-```
-
-Update the tsup config to match:
-
-```typescript
-import { defineConfig } from 'tsup';
-
-export default defineConfig({
-  entry: ['src/index.ts', 'src/utils.ts'],
-  format: ['cjs', 'esm'],
-  dts: true,
-  sourcemap: true,
-  clean: true,
-  external: ['react', 'react-dom'],
-});
-```
+For multiple entry points, add keys to `exports` following the same `import`/`require` pattern as `"."` above, and add corresponding entries to tsup's `entry` array.
 
 ## Peer Dependencies
 
-### When to Use Peer Dependencies
-
-| Dependency type | When to use | Example |
-|---|---|---|
-| `peerDependencies` | Framework/runtime the consumer provides | `react`, `react-dom`, `vue` |
-| `dependencies` | Library the package bundles or needs at runtime | `clsx`, `date-fns` |
-| `devDependencies` | Build tools, test tools, types for development | `tsup`, `vitest`, `typescript` |
-
-### Peer Dependency Ranges
-
-```json
-{
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
-  },
-  "peerDependenciesMeta": {
-    "react-dom": {
-      "optional": true
-    }
-  }
-}
-```
-
-- Use `||` ranges to support multiple major versions.
-- Use `peerDependenciesMeta.optional` for dependencies that enhance but aren't required (e.g., `react-dom` for a hook-only package).
+Use `peerDependencies` for frameworks the consumer provides (React, Vue), `dependencies` for libraries bundled at runtime, and `devDependencies` for build/test tools. Use `||` ranges for multiple major versions. Use `peerDependenciesMeta.optional` for deps that enhance but aren't required.
 
 ## Versioning
 
@@ -164,24 +97,7 @@ During initial development (`0.x.y`):
 
 ### Version Commands
 
-```bash
-# Bump patch (0.1.0 → 0.1.1)
-npm version patch
-
-# Bump minor (0.1.0 → 0.2.0)
-npm version minor
-
-# Bump major (0.1.0 → 1.0.0)
-npm version major
-
-# Set a specific version
-npm version 1.0.0-beta.1
-
-# Bump without creating a git tag
-npm version patch --no-git-tag-version
-```
-
-`npm version` updates `package.json`, creates a git commit, and creates a git tag by default.
+Use `npm version patch|minor|major` to bump. Use `npm version 1.0.0-beta.1` for specific versions. Use `--no-git-tag-version` to skip the git tag. `npm version` updates `package.json`, creates a git commit, and creates a git tag by default.
 
 ## Registry Configuration
 
@@ -195,7 +111,7 @@ npm publish --access public
 
 The `--access public` flag is required for scoped packages on their first publish (scoped packages default to private on npm).
 
-### Private npm Registry
+### Private / GitHub Packages Registry
 
 Create `.npmrc` in the package root:
 
@@ -204,23 +120,7 @@ Create `.npmrc` in the package root:
 //npm.pkg.github.com/:_authToken=${NPM_TOKEN}
 ```
 
-Or for a self-hosted registry:
-
-```
-@scope:registry=https://registry.example.com
-//registry.example.com/:_authToken=${NPM_TOKEN}
-```
-
-**Never hardcode tokens in `.npmrc`** — use environment variables. Add `.npmrc` to `.gitignore` if it contains any credentials. For CI, set `NPM_TOKEN` as a secret in the CI environment.
-
-### GitHub Packages
-
-```
-@scope:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
-
-The scope must match the GitHub org/user name.
+Replace the registry URL for self-hosted registries. For GitHub Packages, the scope must match the GitHub org/user name. **Never hardcode tokens in `.npmrc`** — use environment variables. For CI, set `NPM_TOKEN` as a secret.
 
 ## Prepublish Validation
 
@@ -260,25 +160,7 @@ Review the output to ensure:
 
 ### Manual Publishing
 
-```bash
-# 1. Ensure clean working directory
-git status
-
-# 2. Run all validations
-npm run typecheck && npm run test && npm run build
-
-# 3. Verify the package contents
-npm pack --dry-run
-
-# 4. Bump the version
-npm version patch  # or minor, or major
-
-# 5. Publish
-npm publish --access public
-
-# 6. Push the version commit and tag
-git push && git push --tags
-```
+Clean working directory → `npm run typecheck && npm run test && npm run build` → `npm pack --dry-run` → `npm version patch|minor|major` → `npm publish --access public` → `git push && git push --tags`.
 
 ### GitHub Actions Workflow
 
@@ -331,21 +213,7 @@ Consumers install with:
 npm install @scope/package-name@beta
 ```
 
-### Dist Tags
-
-| Tag | Purpose |
-|---|---|
-| `latest` | Default install tag. Points to the latest stable version. |
-| `beta` | Pre-release versions. Must be explicitly requested. |
-| `next` | Upcoming major version. For early adopters. |
-
-```bash
-# Set a dist tag manually
-npm dist-tag add @scope/package-name@2.0.0-beta.1 beta
-
-# List all tags
-npm dist-tag ls @scope/package-name
-```
+Use `npm dist-tag add` to manage tags (`latest`, `beta`, `next`). Use `npm dist-tag ls` to list them.
 
 ## Monorepo Publishing
 
@@ -375,21 +243,9 @@ npm deprecate @scope/package-name@1.0.0 "Use v2.0.0 instead"
 npm deprecate @scope/package-name "This package has been renamed to @scope/new-name"
 ```
 
-## What This Skill Does NOT Cover
-
-- **Package scaffolding** (creating the package structure) → use `ts-package` skill
-- **Writing tests** → use `ts-test` or `react-test` skills
-- **Building the package** (tsup configuration) → use `ts-package` skill
-
 ## Checklist
 
-When publishing a package:
-
-1. **Verify `package.json` metadata** — name, version, description, license, exports, files, peer dependencies
-2. **Verify `prepublishOnly` script** — must run typecheck, test, and build
-3. **Dry run** — `npm pack --dry-run` to verify published contents
-4. **Check for sensitive files** — no `.env`, credentials, `.npmrc` with tokens, or `src/` in the tarball
-5. **Bump version** — `npm version patch|minor|major` following semver
-6. **Publish** — `npm publish --access public` (or without `--access` for private registries)
-7. **Push tags** — `git push && git push --tags`
-8. **Verify install** — `npm install @scope/package-name` in a clean project to confirm it works
+1. **Verify `package.json`** — name, version, exports, files, peer dependencies, `prepublishOnly` script
+2. **Dry run** — `npm pack --dry-run` to verify no sensitive files (`.env`, credentials, `src/`) are included
+3. **Bump, publish, push** — `npm version` → `npm publish --access public` → `git push && git push --tags`
+4. **Verify install** — `npm install @scope/package-name` in a clean project
