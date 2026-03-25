@@ -94,6 +94,20 @@ Every artifact in the plan must be assigned to either the **backend engineer** o
 
 Each phase must be tagged with its assigned engineer in the plan document. If a phase contains artifacts for both engineers, **split it into two sub-phases**: one for backend (runs first), one for frontend (runs after backend completes).
 
+#### Model Assignment
+
+Every subagent spawned during implementation must specify a model. Choose the cheapest model that can handle the task's complexity:
+
+| Model | When to use |
+|---|---|
+| `opus` | Complex architectural decisions, multi-file refactors with cross-cutting concerns, novel patterns not covered by skills |
+| `sonnet` | Standard CRUD artifacts, skill-guided implementation (form requests, actions, resources, controllers, pages), code review, gap analysis |
+| `haiku` | Simple scaffolding, single-file edits with clear patterns, test generation from existing examples, documentation updates |
+
+**Default to `sonnet`** — it handles most skill-guided work well. Use `opus` only when the task requires reasoning across multiple systems or making judgment calls not covered by skill conventions. Use `haiku` for repetitive, pattern-following tasks where the skill provides the template and the agent just fills in project-specific values.
+
+Each phase in the plan document must include a `**Model:**` tag alongside the engineer assignment.
+
 #### Passing API Contracts
 
 The planner extracts API contracts from the backend engineer's report and passes them verbatim to the frontend engineer. Do not summarize or paraphrase.
@@ -199,6 +213,7 @@ Work is broken into small, committable phases. Each phase is a single reviewable
 ### Phase 1: {Short description}
 
 **Engineer:** Backend | Frontend | Both
+**Model:** opus | sonnet | haiku
 {One sentence on what this phase accomplishes and why it comes first.}
 
 #### Backend Artifacts
@@ -267,6 +282,7 @@ After implementation (each engineer separately), run the `code-review` skill as 
 ### Phase 2: {Short description}
 
 **Engineer:** Backend | Frontend | Both
+**Model:** opus | sonnet | haiku
 
 _{Same structure as Phase 1. Omit Frontend Artifacts/Tests sections if backend-only.}_
 
@@ -275,7 +291,8 @@ _{Same structure as Phase 1. Omit Frontend Artifacts/Tests sections if backend-o
 ### Phase N: {Short description}
 
 **Engineer:** Backend | Frontend | Both
-_{Same structure — Engineer assignment, Backend/Frontend Artifacts tables, Backend/Frontend Tests tables, Expected API Contracts (for phases with backend work), Code Review, Commit message}_
+**Model:** opus | sonnet | haiku
+_{Same structure — Engineer assignment, Model, Backend/Frontend Artifacts tables, Backend/Frontend Tests tables, Expected API Contracts (for phases with backend work), Code Review, Commit message}_
 
 ---
 
