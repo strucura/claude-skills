@@ -328,80 +328,34 @@ export function useInterval(callback: () => void, delay: number | null): void {
 
 ### Template
 
+Each context file contains three parts in one file:
+
+1. **Context** — `createContext<ContextValue | null>(null)`
+2. **Provider** — holds state, memoizes the context value via `useMemo`, renders `<Context.Provider>`
+3. **Consumer hook** — `useContext()` with null check that throws if used outside provider
+
 ```typescript
-import { createContext, useContext, useState, useMemo, type ReactNode } from 'react';
+const XContext = createContext<XContextValue | null>(null);
 
-// --- Types ---
-
-export interface DataGridConfig {
-  pageSize: number;
-  currentPage: number;
-  sortColumn: string | null;
-  sortDirection: 'asc' | 'desc';
+export function XProvider({ children, ...config }: XProviderProps) {
+  const [state, setState] = useState(/* defaults */);
+  const value = useMemo(() => ({ state, ...actions }), [state]);
+  return <XContext.Provider value={value}>{children}</XContext.Provider>;
 }
 
-interface DataGridContextValue {
-  config: DataGridConfig;
-  setPageSize: (size: number) => void;
-  setCurrentPage: (page: number) => void;
-  setSort: (column: string, direction: 'asc' | 'desc') => void;
-  resetSort: () => void;
-}
-
-// --- Context ---
-
-const DataGridContext = createContext<DataGridContextValue | null>(null);
-
-// --- Provider ---
-
-export interface DataGridProviderProps {
-  children: ReactNode;
-  defaultPageSize?: number;
-}
-
-export function DataGridProvider({ children, defaultPageSize = 25 }: DataGridProviderProps) {
-  const [config, setConfig] = useState<DataGridConfig>({
-    pageSize: defaultPageSize,
-    currentPage: 1,
-    sortColumn: null,
-    sortDirection: 'asc',
-  });
-
-  const value = useMemo<DataGridContextValue>(
-    () => ({
-      config,
-      setPageSize: (size) => setConfig((prev) => ({ ...prev, pageSize: size, currentPage: 1 })),
-      setCurrentPage: (page) => setConfig((prev) => ({ ...prev, currentPage: page })),
-      setSort: (column, direction) => setConfig((prev) => ({ ...prev, sortColumn: column, sortDirection: direction })),
-      resetSort: () => setConfig((prev) => ({ ...prev, sortColumn: null, sortDirection: 'asc' })),
-    }),
-    [config],
-  );
-
-  return <DataGridContext.Provider value={value}>{children}</DataGridContext.Provider>;
-}
-
-// --- Consumer Hook ---
-
-export function useDataGridContext(): DataGridContextValue {
-  const context = useContext(DataGridContext);
-
-  if (context === null) {
-    throw new Error('useDataGridContext must be used within a <DataGridProvider>');
-  }
-
+export function useX(): XContextValue {
+  const context = useContext(XContext);
+  if (!context) throw new Error('useX must be used within <XProvider>');
   return context;
 }
 ```
 
 ### Context Conventions
 
-1. **Context value is never `undefined`** — initialize the context with `null` and throw in the consumer hook if null. This catches missing providers at runtime.
-2. **Provider is a named export** — `DataGridProvider`, not a default export.
-3. **Consumer hook is the only way to access context** — never export the raw context object. The hook provides the null check.
-4. **Memoize the context value** — use `useMemo` to prevent unnecessary re-renders of all consumers.
-5. **Props interface for the provider** — typed `children` + any configuration props.
-6. **One file per context** — context definition, provider, and consumer hook live together.
+1. **Initialize with `null`, throw if null** — catches missing providers at runtime.
+2. **Named exports only** — `XProvider`, not default export. Never export the raw context object.
+3. **Memoize the context value** — `useMemo` prevents unnecessary re-renders of all consumers.
+4. **One file per context** — context definition, provider, and consumer hook live together.
 
 ## Component Patterns for Libraries
 

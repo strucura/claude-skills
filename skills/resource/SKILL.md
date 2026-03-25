@@ -108,72 +108,14 @@ public function toArray(Request $request): array
 
 ## Using Resources
 
-### Singular Resource — Inertia
-
-```php
-return Inertia::render('assets/show', [
-    'asset' => AssetResource::make($asset),
-]);
-```
-
-### Resource Collection — Inertia
-
-```php
-return Inertia::render('assets/index', [
-    'assets' => AssetResource::collection($assets),
-]);
-```
-
-### Paginated Collection — Inertia
-
-Paginated results preserve pagination metadata automatically:
-
-```php
-return Inertia::render('assets/index', [
-    'assets' => AssetResource::collection(Asset::paginate()),
-]);
-```
-
-### Singular Resource — API
-
-```php
-return AssetResource::make($asset);
-```
-
-### Resource Collection — API
-
-```php
-return AssetResource::collection($assets);
-```
+- **Singular:** `AssetResource::make($asset)` — for show pages and API detail endpoints
+- **Collection:** `AssetResource::collection($assets)` — for index pages and API list endpoints
+- **Paginated:** `AssetResource::collection(Asset::paginate())` — pagination metadata is preserved automatically
+- Works identically for Inertia props and API JSON responses
 
 ## Custom Collection Resources
 
-Only create a dedicated collection class when you need custom meta or wrapper logic on the collection itself. This is rare.
-
-```php
-<?php
-
-namespace App\Domains\Application\Assets\Resources;
-
-use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\ResourceCollection;
-
-class AssetCollection extends ResourceCollection
-{
-    public $collects = AssetResource::class;
-
-    public function toArray(Request $request): array
-    {
-        return [
-            'data' => $this->collection,
-            'summary' => [
-                'total_count' => $this->collection->count(),
-                'active_count' => $this->collection->where('status', 'active')->count(),
-            ],
-        ];
-    }
-}
-```
+Only create a dedicated `ResourceCollection` class when you need custom meta or wrapper logic on the collection itself (e.g., summary counts). This is rare — prefer `::collection()` in most cases.
 
 ## Best Practices
 

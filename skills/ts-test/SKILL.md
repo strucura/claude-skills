@@ -28,16 +28,15 @@ Before writing tests:
 
 ## Vitest Configuration
 
-### vitest.config.ts (Node environment)
-
 ```typescript
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
   test: {
-    environment: 'node',
+    environment: 'node',  // Use 'jsdom' when code interacts with DOM APIs (localStorage, window, document)
     globals: true,
+    // setupFiles: ['./src/test-setup.ts'],  // Add for jsdom with @testing-library/jest-dom
   },
   resolve: {
     alias: {
@@ -46,28 +45,6 @@ export default defineConfig({
   },
 });
 ```
-
-### vitest.config.ts (DOM environment)
-
-```typescript
-import { defineConfig } from 'vitest/config';
-import path from 'path';
-
-export default defineConfig({
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test-setup.ts'],
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-});
-```
-
-Use `node` for pure logic. Use `jsdom` only when the code under test interacts with DOM APIs (localStorage, window, document).
 
 ## Test File Structure
 

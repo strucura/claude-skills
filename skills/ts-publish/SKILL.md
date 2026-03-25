@@ -66,39 +66,9 @@ Before configuring publishing:
 }
 ```
 
-### Field Explanations
-
-| Field | Purpose |
-|---|---|
-| `name` | Package name. Use `@scope/` prefix for scoped packages. |
-| `version` | Current semver version. Start at `0.1.0` for initial development. |
-| `type: "module"` | Declares the package as ESM. Required for `.js` extensions to be treated as ESM. |
-| `main` | Entry point for CommonJS consumers (`require()`). Points to `.cjs` output. |
-| `module` | Entry point for bundlers that understand ESM. Points to `.js` output. |
-| `types` | Entry point for TypeScript type resolution. Points to `.d.ts` output. |
-| `exports` | Modern entry point map. Takes precedence over `main`/`module` in Node 12+. |
-| `files` | Whitelist of files/directories included in the published tarball. |
-| `prepublishOnly` | Runs before `npm publish`. Ensures the package is always built before publishing. |
-
 ### Optional Metadata
 
-```json
-{
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/org/repo.git",
-    "directory": "packages/package-name"
-  },
-  "homepage": "https://github.com/org/repo#readme",
-  "bugs": {
-    "url": "https://github.com/org/repo/issues"
-  },
-  "keywords": ["react", "hooks", "typescript"],
-  "engines": {
-    "node": ">=18"
-  }
-}
-```
+Add `repository` (with `directory` for monorepos), `homepage`, `bugs`, `keywords`, and `engines` fields as needed.
 
 ### Subpath Exports
 
@@ -332,48 +302,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: 'https://registry.npmjs.org'  # Use 'https://npm.pkg.github.com' for GitHub Packages
 
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test
       - run: npm run build
-      - run: npm publish --access public
+      - run: npm publish --access public  # Omit --access for private registries
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-```
-
-### GitHub Packages Workflow
-
-```yaml
-name: Publish to GitHub Packages
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run test
-      - run: npm run build
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}  # Use secrets.GITHUB_TOKEN for GitHub Packages
 ```
 
 ## Prerelease Versions

@@ -2,7 +2,7 @@
 name: plan
 description: Plan a feature by challenging ideas, identifying artifacts (controllers, actions, resources, etc.), and producing a phased implementation doc. Use when the user wants to plan, architect, or strategize before building.
 argument-hint: "[feature or problem description]"
-allowed-tools: Read, Grep, Glob, Write, Edit
+allowed-tools: Read, Grep, Glob, Write, Edit, Agent
 ---
 
 # Plan Skill
@@ -85,6 +85,48 @@ Once consensus is reached, create the plan document.
 2. **Write the plan** to `docs/plans/{plan-name}.md` using the format below.
 3. **Read all available skills** in `.claude/skills/` and any installed plugins to understand what tooling exists for each task.
 
+#### Engineer Assignment
+
+Every artifact in the plan must be assigned to either the **backend engineer** or the **frontend engineer**. This is determined by the artifact type and skill:
+
+**Backend Engineer** — uses skills: `form-request`, `action`, `resource`, `controller`, `datagrid`, `chart`
+**Frontend Engineer** — uses skills: `ts-inertia`, `shadcn-component`, `react-test`, `ts-test`, `ts-package`, `ts-publish`
+
+Each phase must be tagged with its assigned engineer in the plan document. If a phase contains artifacts for both engineers, **split it into two sub-phases**: one for backend (runs first), one for frontend (runs after backend completes).
+
+#### Execution Order: Backend Before Frontend
+
+**Frontend work must never begin until all backend work for that phase is complete.** This is non-negotiable because:
+
+1. The frontend engineer needs API contracts to build against.
+2. Guessing at API shapes causes integration bugs.
+3. The backend engineer's report includes the actual response shapes, permission names, and Inertia props — the frontend engineer consumes these.
+
+The execution flow for each phase is:
+
+```
+Plan Phase
+    ├── Backend sub-phase → backend-engineer subagent
+    │     └── Returns: API contracts, changes, artifacts report
+    ├── Planner receives backend report
+    │     └── Extracts API contracts for frontend
+    └── Frontend sub-phase → frontend-engineer subagent
+          └── Receives: phase requirements + API contracts from backend
+```
+
+If a phase is **backend-only** or **frontend-only**, no splitting is needed — just assign it to the correct engineer.
+
+#### Passing API Contracts
+
+When the backend engineer subagent completes a phase, it returns a structured report including:
+
+- **Endpoints** — method, route, auth, request body, response shape, status codes.
+- **Inertia Props** — page name, prop types, shared data changes.
+- **Events & Side Effects** — event classes, payloads, triggers.
+- **Changes to Existing Code** — modified models, routes, configs.
+
+**The planner must extract the API contracts section from the backend report and pass it to the frontend engineer subagent.** Do not summarize or paraphrase — pass the contracts verbatim. The frontend engineer validates these contracts against the actual backend code before building.
+
 ### Phase 4: Gap Analysis
 
 Once the plan is written, invoke the `gap-analysis` skill against it. Hand it the plan document, the relevant codebase areas, and any specs or requirements that informed the plan. The gap analysis skill will tear apart the plan from every angle — business requirements, technical completeness, functionality holes, testing coverage, and documentation.
@@ -97,7 +139,59 @@ Once the plan is written, invoke the `gap-analysis` skill against it. Hand it th
 
 Update the plan document with the results. Critical and major gaps from the analysis should be reflected in the "Gaps" section of the plan. If the gap analysis surfaces issues that change the implementation approach, revise the phases accordingly.
 
-### Phase 5: Keep the Plan Current
+### Phase 5: Code Review After Each Phase
+
+Every phase in the plan must include a code review step. This is not optional.
+
+After each phase is implemented, **spawn a subagent using the `code-review` skill** to review the code changes from that phase. The subagent receives:
+
+1. **The list of files changed or created in the phase** — from the artifacts table.
+2. **The phase requirements** — the phase description, artifacts table, and tests table from the plan document.
+
+The subagent reviews only the changed code against the phase requirements and reports back on:
+- **Duplicated logic** — within files, across files, and against existing code.
+- **Abstraction opportunities** — only where duplication warrants them.
+- **Faulty logic** — correctness errors, requirement misalignment, state issues.
+
+#### Handling Review Findings
+
+When the code review subagent returns findings:
+
+- **Blocking issues (LOGIC findings with severity "Blocking"):** Must be fixed before moving to the next phase. Update the changed files, then re-run the code review on the fixed files.
+- **Major issues:** Should be fixed in the current phase before proceeding. If fixing them would change the phase scope significantly, add them as a follow-up task in the next phase.
+- **Duplication and abstraction findings:** Evaluate whether they should be addressed now or tracked for later. If the same duplication finding appears across multiple phases, it must be addressed — it's no longer premature.
+- **Clean review:** Proceed to the next phase.
+
+#### Plan Document Integration
+
+Add a "Code Review" section to each phase in the plan document template:
+
+```markdown
+#### Code Review
+
+After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address any blocking or major findings before committing.
+```
+
+This ensures every phase in the plan explicitly accounts for the review step.
+
+### Phase 6: Update Documentation
+
+After all implementation phases are complete, invoke the `update-docs` skill as a subagent. Pass it:
+
+1. **The plan document** — so it knows what was built.
+2. **The list of all files changed across all phases** — from each engineer's reports.
+3. **Any API contracts** — from the backend engineer's reports.
+
+The `update-docs` skill will audit the package source code against its documentation and update docs to reflect the current state. This catches:
+
+- New features that aren't documented.
+- Changed APIs or response shapes that docs still reference incorrectly.
+- Removed functionality that docs still describe.
+- New configuration options or permissions that need documenting.
+
+**This is not optional.** Undocumented features are invisible features. Documentation that contradicts the code is worse than no documentation.
+
+### Phase 7: Keep the Plan Current
 
 As the conversation continues and decisions evolve:
 
@@ -133,9 +227,10 @@ Work is broken into small, committable phases. Each phase is a single reviewable
 
 ### Phase 1: {Short description}
 
+**Engineer:** Backend | Frontend | Both
 {One sentence on what this phase accomplishes and why it comes first.}
 
-#### Artifacts
+#### Backend Artifacts
 
 | Type | Class | Path | Skill |
 |---|---|---|---|
@@ -145,7 +240,7 @@ Work is broken into small, committable phases. Each phase is a single reviewable
 | Controller | `AssetController@index` | `app/Http/Controllers/.../` | `controller` |
 | Controller | `AssetController@show` | `app/Http/Controllers/.../` | `controller` |
 
-#### Tests
+#### Backend Tests
 
 | Test | Location | Key Cases |
 |---|---|---|
@@ -155,15 +250,55 @@ Work is broken into small, committable phases. Each phase is a single reviewable
 | `AssetControllerTest@index` | `tests/Feature/.../Controllers/` | Returns paginated resources, passes `can` array |
 | `AssetControllerTest@show` | `tests/Feature/.../Controllers/` | Returns single resource via route model binding |
 
+#### Expected API Contracts
+
+{Populated by the planner based on the artifacts. The backend engineer will confirm or correct these in its report.}
+
+```
+GET /assets
+  Auth: assets.view
+  Response: AssetResource (paginated)
+  Response Shape: { id: int, name: string, ... }
+
+GET /assets/{asset}
+  Auth: assets.view
+  Response: AssetResource
+  Response Shape: { id: int, name: string, ... }
+
+Inertia Props (Assets/Index):
+  Props: { assets: Paginated<Asset>, can: { createAsset: bool } }
+```
+
+#### Frontend Artifacts
+
+{Omit this section if no frontend work in this phase.}
+
+| Type | Component/File | Path | Skill |
+|---|---|---|---|
+| Inertia Page | `Assets/Index` | `resources/js/Pages/Assets/Index.tsx` | `ts-inertia` |
+| Inertia Page | `Assets/Show` | `resources/js/Pages/Assets/Show.tsx` | `ts-inertia` |
+
+#### Frontend Tests
+
+| Test | Location | Key Cases |
+|---|---|---|
+| `Index.test.tsx` | `resources/js/Pages/Assets/__tests__/` | Renders asset list, pagination controls, empty state |
+| `Show.test.tsx` | `resources/js/Pages/Assets/__tests__/` | Renders asset details, handles missing data |
+
+#### Code Review
+
+After implementation (each engineer separately), run the `code-review` skill as a subagent against all artifacts produced by that engineer. Address any blocking or major findings before committing.
+
 #### Commit: `Add read-only asset endpoints with authorization`
 
 ---
 
 ### Phase 2: {Short description}
 
+**Engineer:** Backend
 {One sentence on what this phase adds on top of Phase 1.}
 
-#### Artifacts
+#### Backend Artifacts
 
 | Type | Class | Path | Skill |
 |---|---|---|---|
@@ -173,7 +308,7 @@ Work is broken into small, committable phases. Each phase is a single reviewable
 | Controller | `AssetController@create` | `app/Http/Controllers/.../` | `controller` |
 | Controller | `AssetController@store` | `app/Http/Controllers/.../` | `controller` |
 
-#### Tests
+#### Backend Tests
 
 | Test | Location | Key Cases |
 |---|---|---|
@@ -182,13 +317,40 @@ Work is broken into small, committable phases. Each phase is a single reviewable
 | `StoreAssetRequestTest` | `tests/Feature/.../Requests/` | Validates required fields, rejects invalid data, permission check |
 | `AssetControllerTest@store` | `tests/Feature/.../Controllers/` | Fakes `CreateAssetAction::fake()`, asserts called, redirects |
 
+#### Expected API Contracts
+
+```
+POST /assets
+  Auth: assets.create
+  Request: StoreAssetRequest
+  Request Body: { name: string (required), description: string (nullable), ... }
+  Response: redirect to Assets/Show
+  Status Codes: { 302: created, 403: unauthorized, 422: validation }
+
+Inertia Props (Assets/Create):
+  Props: { can: { createAsset: bool } }
+```
+
+#### Code Review
+
+After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address any blocking or major findings before committing.
+
 #### Commit: `Add asset creation with validation and authorization`
 
 ---
 
 ### Phase N: {Short description}
 
-_{Same structure — Artifacts table, Tests table, Commit message}_
+**Engineer:** Backend | Frontend | Both
+_{Same structure — Engineer assignment, Backend/Frontend Artifacts tables, Backend/Frontend Tests tables, Expected API Contracts (for phases with backend work), Code Review, Commit message}_
+
+---
+
+### Final Phase: Documentation Sync
+
+**Engineer:** N/A (subagent)
+
+Run the `update-docs` skill as a subagent against all files changed across all phases. Ensure documentation reflects the current state of the codebase.
 
 ## Phase Design Rules
 
@@ -198,6 +360,9 @@ _{Same structure — Artifacts table, Tests table, Commit message}_
 - **Read-only before write** — index/show before store/update/destroy.
 - **Data layer before controller** — Form Requests → Data Objects → Actions → Resources → Controller wiring.
 - **Controller tests fake Actions** — use `::fake()` to isolate controller logic from business logic.
+- **Backend before frontend** — within any phase tagged "Both", the backend engineer runs first, returns API contracts, and only then does the frontend engineer begin. Never run them in parallel.
+- **Engineer assignment is explicit** — every phase is tagged `Backend`, `Frontend`, or `Both`. No phase is unassigned.
+- **API contracts bridge the gap** — the planner extracts API contracts from the backend engineer's report and passes them verbatim to the frontend engineer. No summarizing, no paraphrasing.
 
 ## Gaps
 
@@ -234,3 +399,6 @@ When assigning skills to tasks, use only skills that exist in `.claude/skills/` 
 - **The plan is a living document.** Update it as things change. A stale plan is worse than no plan.
 - **If the user is right, say so and move on.** Being challenging doesn't mean being contrarian.
 - **Always run gap analysis before considering a plan complete.** A plan without a gap analysis is a rough draft, not a plan. Use the `gap-analysis` skill — don't skip it because the plan "looks good."
+- **Always run code review after each phase.** Every phase gets a `code-review` subagent pass before the commit. Blocking findings must be resolved before proceeding. This is not optional — a phase without a code review is a phase with unknown defects.
+- **Backend completes before frontend starts.** In phases tagged "Both", spawn the `backend-engineer` subagent first, receive its report (including API contracts), then spawn the `frontend-engineer` subagent with the contracts. Never run them in parallel — the frontend engineer depends on the backend engineer's output.
+- **Always run update-docs as the final step.** After all phases are implemented, invoke the `update-docs` skill as a subagent to sync documentation with the code changes. A plan is not complete until docs reflect reality.

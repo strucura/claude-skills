@@ -137,101 +137,13 @@ class AssetController extends Controller
 
 ## Controller Method Patterns
 
-### Index — Direct Query, No Action
+Each method in the CRUD template above follows a specific pattern:
 
-Index methods query the model directly. The query should be straightforward — pagination and eager loading. If the index needs complex business-rule filtering, move that to a model scope, not an Action.
-
-```php
-public function index(IndexAssetRequest $request): Response
-{
-    $assets = Asset::query()
-        ->with(['category', 'assignedUser'])
-        ->paginate();
-
-    return Inertia::render('assets/index', [
-        'assets' => AssetResource::collection($assets),
-        'can' => [
-            'create' => Gate::allows('assets:create'),
-        ],
-    ]);
-}
-```
-
-### Show — Route Model Binding, No Action
-
-The model is resolved by Laravel's route model binding. Eager load relationships inline if needed, then wrap in a Resource:
-
-```php
-public function show(ShowAssetRequest $request, Asset $asset): Response
-{
-    return Inertia::render('assets/show', [
-        'asset' => AssetResource::make($asset->load(['category', 'assignedUser'])),
-        'can' => [
-            'edit' => Gate::allows('assets:edit'),
-            'destroy' => Gate::allows('assets:destroy'),
-        ],
-    ]);
-}
-```
-
-### Store — Data Object Maps the Request, Action Creates
-
-```php
-public function store(StoreAssetRequest $request): RedirectResponse
-{
-    $asset = CreateAssetAction::make()->handle(
-        AssetData::fromStoreAssetRequest($request),
-    );
-
-    return redirect()->route('assets.show', $asset);
-}
-```
-
-### Update — Same Pattern as Store
-
-```php
-public function update(UpdateAssetRequest $request, Asset $asset): RedirectResponse
-{
-    UpdateAssetAction::make()->handle(
-        $asset,
-        AssetData::fromUpdateAssetRequest($request),
-    );
-
-    return redirect()->route('assets.show', $asset);
-}
-```
-
-### Destroy — Action Handles Deletion
-
-```php
-public function destroy(DestroyAssetRequest $request, Asset $asset): RedirectResponse
-{
-    DeleteAssetAction::make()->handle($asset);
-
-    return redirect()->route('assets.index');
-}
-```
-
-### Create/Edit — Render a Form
-
-These render a page. If they need dropdown options or related data, query it directly and wrap in a Resource:
-
-```php
-public function create(CreateAssetRequest $request): Response
-{
-    return Inertia::render('assets/create', [
-        'categories' => AssetCategoryResource::collection(AssetCategory::all()),
-    ]);
-}
-
-public function edit(EditAssetRequest $request, Asset $asset): Response
-{
-    return Inertia::render('assets/edit', [
-        'asset' => AssetResource::make($asset),
-        'categories' => AssetCategoryResource::collection(AssetCategory::all()),
-    ]);
-}
-```
+- **index** — query directly with eager loading + pagination, no Action. Use model scopes for complex filtering.
+- **show** — route model binding, `$asset->load([...])` for eager loading, wrap in Resource.
+- **create/edit** — render a form. Pass dropdown data via Resources if needed (e.g., `AssetCategoryResource::collection(AssetCategory::all())`).
+- **store/update** — map request to Data object via `from*` method, delegate to Action, redirect.
+- **destroy** — delegate to Action, redirect to index.
 
 ## Passing Permissions to the Frontend
 
@@ -266,32 +178,7 @@ public function index(IndexAssetRequest $request): \Illuminate\Http\Resources\Js
 }
 ```
 
-## What a Controller Should NOT Look Like
-
-```php
-// BAD — business logic, raw queries, no Resource, no Action, no Form Request
-public function store(Request $request): RedirectResponse
-{
-    $request->validate(['name' => 'required']);
-
-    $asset = new Asset();
-    $asset->name = $request->input('name');
-    $asset->slug = Str::slug($request->input('name'));
-    $asset->user_id = $request->user()->id;
-    $asset->status = 'draft';
-    $asset->save();
-
-    if ($request->has('notify_team')) {
-        Notification::send($asset->team->members, new AssetCreated($asset));
-    }
-
-    event(new AssetCreated($asset));
-
-    return redirect()->route('assets.show', $asset);
-}
-```
-
-Everything above the redirect belongs in an Action. The `validate` call belongs in a Form Request. The response should use a Resource if returning data.
+**Anti-pattern:** Inline validation (`$request->validate()`), direct model creation (`new Model`), event dispatching, and notification sending in controllers. All of these belong in Form Requests and Actions respectively.
 
 ## Naming Conventions
 

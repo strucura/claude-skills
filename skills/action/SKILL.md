@@ -192,28 +192,7 @@ class {Name}Data
 }
 ```
 
-### Calling from a Controller
-
-```php
-public function store(StoreAssetRequest $request): RedirectResponse
-{
-    $asset = CreateAssetAction::make()->handle(
-        AssetData::fromStoreAssetRequest($request),
-    );
-
-    return redirect()->route('assets.show', $asset);
-}
-
-public function update(UpdateAssetRequest $request, Asset $asset): RedirectResponse
-{
-    UpdateAssetAction::make()->handle(
-        $asset,
-        AssetData::fromUpdateAssetRequest($request),
-    );
-
-    return redirect()->route('assets.show', $asset);
-}
-```
+See the `controller` skill for full controller wiring patterns.
 
 ## Data Object Factory Methods
 
@@ -313,51 +292,9 @@ it('calls the create asset action', function () {
 });
 ```
 
-### Faking an Action — Ignoring It
-
-When the action is a side effect you don't care about in a particular test, fake it with no expectations:
-
-```php
-it('renders the form after failed validation', function () {
-    CreateAssetAction::fake(function ($mock) {
-        $mock->shouldReceive('handle')->never();
-    });
-
-    $this->actingAs(User::factory()->create())
-        ->post(route('assets.store'), [
-            // Missing required 'name'
-        ])
-        ->assertSessionHasErrors('name');
-});
-```
-
-### Faking an Action — Returning Specific Data
-
-Control what the mock returns to test downstream behavior:
-
-```php
-use App\Domains\Application\Assets\Actions\FetchAssetReportAction;
-
-it('displays the asset report', function () {
-    $expected = collect([
-        ['name' => 'Laptop', 'count' => 5],
-        ['name' => 'Monitor', 'count' => 12],
-    ]);
-
-    FetchAssetReportAction::fake(function ($mock) use ($expected) {
-        $mock->shouldReceive('handle')
-            ->once()
-            ->andReturn($expected);
-    });
-
-    $this->actingAs(User::factory()->create())
-        ->get(route('assets.report'))
-        ->assertInertia(fn ($page) => $page
-            ->component('assets/report')
-            ->has('report', 2)
-        );
-});
-```
+Other `::fake()` patterns:
+- **Ignoring** — `$mock->shouldReceive('handle')->never()` to assert the action was NOT called (e.g., validation failure tests)
+- **Returning specific data** — `$mock->shouldReceive('handle')->once()->andReturn($data)` to control downstream behavior
 
 ### Testing a Data Object's Factory Methods
 

@@ -257,102 +257,15 @@ export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 
 ### Complex Radix Compound Component
 
-For multi-part Radix primitives like Select, DropdownMenu, Dialog:
+For multi-part Radix primitives (Select, DropdownMenu, Dialog), apply the same pattern as the simpler examples above, but for each sub-component:
 
-```typescript
-import * as SelectPrimitive from '@radix-ui/react-select';
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
+1. Import `* as XPrimitive` from the Radix package
+2. Wrap each Radix part (Root, Trigger, Content, Item, etc.) in its own function
+3. Add `data-slot`, `cn()` for className merging, and spread `{...props}`
+4. Use `SelectPrimitive.Portal` for content that renders in a portal
+5. Style state with Radix data attributes: `data-[state=open]:animate-in`, `data-[disabled]:opacity-50`
 
-function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />;
-}
-
-function SelectTrigger({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Trigger>) {
-  return (
-    <SelectPrimitive.Trigger
-      data-slot="select-trigger"
-      className={cn(
-        'flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="h-4 w-4 opacity-50" />
-      </SelectPrimitive.Icon>
-    </SelectPrimitive.Trigger>
-  );
-}
-
-function SelectContent({
-  className,
-  children,
-  position = 'popper',
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content>) {
-  return (
-    <SelectPrimitive.Portal>
-      <SelectPrimitive.Content
-        data-slot="select-content"
-        className={cn(
-          'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
-          position === 'popper' &&
-            'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
-          className,
-        )}
-        position={position}
-        {...props}
-      >
-        <SelectPrimitive.Viewport
-          className={cn(
-            'p-1',
-            position === 'popper' &&
-              'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
-          )}
-        >
-          {children}
-        </SelectPrimitive.Viewport>
-      </SelectPrimitive.Content>
-    </SelectPrimitive.Portal>
-  );
-}
-
-function SelectItem({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
-  return (
-    <SelectPrimitive.Item
-      data-slot="select-item"
-      className={cn(
-        'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-        className,
-      )}
-      {...props}
-    >
-      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-        <SelectPrimitive.ItemIndicator>
-          <CheckIcon className="h-4 w-4" />
-        </SelectPrimitive.ItemIndicator>
-      </span>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-    </SelectPrimitive.Item>
-  );
-}
-
-function SelectValue({ ...props }: React.ComponentProps<typeof SelectPrimitive.Value>) {
-  return <SelectPrimitive.Value data-slot="select-value" {...props} />;
-}
-
-export { Select, SelectTrigger, SelectContent, SelectItem, SelectValue };
-```
+Export all parts as named exports.
 
 ### Component with forwardRef
 
@@ -395,160 +308,21 @@ export { Input };
 
 ### Component with Internal Context
 
-For complex components that need shared state across compound parts:
+For complex components that need shared state across compound parts, follow the context + provider pattern from the `ts-package` skill:
 
-```typescript
-import * as React from 'react';
-import { cn } from '@/lib/utils';
-
-type SidebarState = 'expanded' | 'collapsed';
-
-interface SidebarContextValue {
-  state: SidebarState;
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  toggleSidebar: () => void;
-}
-
-const SidebarContext = React.createContext<SidebarContextValue | null>(null);
-
-function useSidebar(): SidebarContextValue {
-  const context = React.useContext(SidebarContext);
-  if (!context) {
-    throw new Error('useSidebar must be used within a <SidebarProvider>');
-  }
-  return context;
-}
-
-interface SidebarProviderProps extends React.ComponentProps<'div'> {
-  defaultOpen?: boolean;
-}
-
-function SidebarProvider({
-  defaultOpen = true,
-  className,
-  children,
-  ...props
-}: SidebarProviderProps) {
-  const [open, setOpen] = React.useState(defaultOpen);
-
-  const value = React.useMemo<SidebarContextValue>(
-    () => ({
-      state: open ? 'expanded' : 'collapsed',
-      open,
-      setOpen,
-      toggleSidebar: () => setOpen((prev) => !prev),
-    }),
-    [open],
-  );
-
-  return (
-    <SidebarContext.Provider value={value}>
-      <div data-slot="sidebar-provider" className={cn('flex min-h-screen', className)} {...props}>
-        {children}
-      </div>
-    </SidebarContext.Provider>
-  );
-}
-
-function Sidebar({ className, ...props }: React.ComponentProps<'aside'>) {
-  const { state } = useSidebar();
-
-  return (
-    <aside
-      data-slot="sidebar"
-      data-state={state}
-      className={cn(
-        'flex w-64 flex-col border-r bg-sidebar text-sidebar-foreground transition-all data-[state=collapsed]:w-16',
-        className,
-      )}
-      {...props}
-    />
-  );
-}
-
-function SidebarTrigger({ className, ...props }: React.ComponentProps<'button'>) {
-  const { toggleSidebar } = useSidebar();
-
-  return (
-    <button
-      data-slot="sidebar-trigger"
-      onClick={toggleSidebar}
-      className={cn('inline-flex h-9 w-9 items-center justify-center rounded-md', className)}
-      {...props}
-    />
-  );
-}
-
-export { SidebarProvider, Sidebar, SidebarTrigger, useSidebar };
-```
+1. Create a context with `createContext<ContextValue | null>(null)`
+2. Create a consumer hook that throws if context is null
+3. Create a provider component that holds state and memoizes the context value
+4. Each compound part reads from context via the consumer hook
+5. Use `data-state` attributes to expose state for CSS styling
 
 ## CVA Patterns
 
-### Defining Variants
+CVA structure: `cva('base-classes', { variants: { ... }, compoundVariants: [...], defaultVariants: { ... } })`
 
-```typescript
-const variants = cva(
-  'base-classes-that-always-apply',
-  {
-    variants: {
-      variant: {
-        default: 'classes-for-default',
-        destructive: 'classes-for-destructive',
-      },
-      size: {
-        default: 'h-9 px-4',
-        sm: 'h-8 px-3 text-xs',
-        lg: 'h-10 px-8',
-      },
-    },
-    compoundVariants: [
-      {
-        variant: 'destructive',
-        size: 'lg',
-        className: 'font-bold',
-      },
-    ],
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
-    },
-  },
-);
-```
-
-### Typing with VariantProps
-
-```typescript
-import { cva, type VariantProps } from 'class-variance-authority';
-
-const buttonVariants = cva('...', { variants: { ... } });
-
-type ButtonProps = React.ComponentProps<'button'> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  };
-```
-
-`VariantProps` extracts the variant types from a CVA definition. Combined with `React.ComponentProps`, the component accepts all native props plus the typed variant options.
-
-### Exporting Variants
-
-Always export the CVA variants alongside the component so consumers can use them programmatically:
-
-```typescript
-export { Button, buttonVariants };
-```
-
-This allows consumers to generate classes without rendering:
-
-```typescript
-import { buttonVariants } from '@/components/ui/button';
-
-<Link className={buttonVariants({ variant: 'outline' })} href="/about">
-  About
-</Link>
-```
+- **`VariantProps<typeof xVariants>`** extracts variant types. Intersect with `React.ComponentProps<>` for the full props type.
+- **`compoundVariants`** apply classes when multiple variant values match simultaneously.
+- **Always export variants alongside the component** (`export { Button, buttonVariants }`) so consumers can generate classes without rendering (e.g., on `<Link>` elements).
 
 ## The `asChild` / Slot Pattern
 

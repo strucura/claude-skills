@@ -123,73 +123,9 @@ Also assign new permissions to the appropriate roles:
 - **admin** — gets most permissions (check existing pattern for exclusions)
 - **member** — gets read-only permissions (index, show, view-type actions)
 
-## Using Form Requests in Controllers
+## Usage
 
-Type-hint the Form Request in every controller method. Each method gets its own unique Form Request.
-
-```php
-class AssetController extends Controller
-{
-    public function index(IndexAssetRequest $request): Response
-    {
-        return Inertia::render('assets/index', [
-            'assets' => Asset::paginate(),
-        ]);
-    }
-
-    public function show(ShowAssetRequest $request, Asset $asset): Response
-    {
-        return Inertia::render('assets/show', [
-            'asset' => $asset,
-        ]);
-    }
-
-    public function store(StoreAssetRequest $request): RedirectResponse
-    {
-        $asset = Asset::create($request->validated());
-        return redirect()->route('assets.show', $asset);
-    }
-
-    public function update(UpdateAssetRequest $request, Asset $asset): RedirectResponse
-    {
-        $asset->update($request->validated());
-        return redirect()->route('assets.show', $asset);
-    }
-
-    public function destroy(DestroyAssetRequest $request, Asset $asset): RedirectResponse
-    {
-        $asset->delete();
-        return redirect()->route('assets.index');
-    }
-}
-```
-
-## Passing Permissions to Frontend
-
-Pass permission checks to Inertia for conditional UI rendering:
-
-```php
-$can = [
-    'create' => Gate::allows('assets:create'),
-    'edit' => Gate::allows('assets:edit'),
-    'destroy' => Gate::allows('assets:destroy'),
-];
-
-return Inertia::render('assets/index', [
-    'assets' => Asset::paginate(),
-    'can' => $can,
-]);
-```
-
-```tsx
-interface Props {
-    can: { create: boolean; edit: boolean; destroy: boolean };
-}
-
-{can.create && <Button>New Asset</Button>}
-{can.edit && <Button>Edit</Button>}
-{can.destroy && <Button variant="destructive">Delete</Button>}
-```
+Type-hint the Form Request in the controller method signature. See the `controller` skill for full wiring patterns including `can` arrays for frontend permission checks.
 
 ## Validation Rules
 

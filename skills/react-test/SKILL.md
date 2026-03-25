@@ -225,59 +225,6 @@ describe('useToggle', () => {
 });
 ```
 
-### Hook with Dependencies
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { renderHook } from '@testing-library/react';
-import { useLocalStorage } from './use-local-storage';
-
-describe('useLocalStorage', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  it('returns the initial value when storage is empty', () => {
-    const { result } = renderHook(() => useLocalStorage('key', 'default'));
-
-    expect(result.current[0]).toBe('default');
-  });
-
-  it('returns the stored value when storage has data', () => {
-    localStorage.setItem('key', JSON.stringify('stored'));
-
-    const { result } = renderHook(() => useLocalStorage('key', 'default'));
-
-    expect(result.current[0]).toBe('stored');
-  });
-
-  it('updates storage when the value changes', () => {
-    const { result } = renderHook(() => useLocalStorage('key', 'default'));
-
-    act(() => {
-      result.current[1]('updated');
-    });
-
-    expect(JSON.parse(localStorage.getItem('key')!)).toBe('updated');
-  });
-
-  it('responds to key changes', () => {
-    const { result, rerender } = renderHook(
-      ({ key }) => useLocalStorage(key, 'default'),
-      { initialProps: { key: 'key-a' } },
-    );
-
-    act(() => {
-      result.current[1]('value-a');
-    });
-
-    rerender({ key: 'key-b' });
-
-    expect(result.current[0]).toBe('default');
-  });
-});
-```
-
 ### Hook Conventions
 
 1. **Use `renderHook`** — never render a dummy component just to test a hook.
@@ -287,14 +234,9 @@ describe('useLocalStorage', () => {
 
 ## Context / Provider Testing
 
-### Testing a Provider
+Create a `TestConsumer` component that reads from context, then test the provider's behavior through it:
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { DataGridProvider, useDataGridContext } from './datagrid-context';
-
 function TestConsumer() {
   const { config, setPageSize } = useDataGridContext();
   return (
@@ -304,133 +246,40 @@ function TestConsumer() {
     </div>
   );
 }
-
-describe('DataGridProvider', () => {
-  it('provides default config values', () => {
-    render(
-      <DataGridProvider>
-        <TestConsumer />
-      </DataGridProvider>,
-    );
-
-    expect(screen.getByTestId('page-size')).toHaveTextContent('25');
-  });
-
-  it('updates page size through context', async () => {
-    const user = userEvent.setup();
-    render(
-      <DataGridProvider>
-        <TestConsumer />
-      </DataGridProvider>,
-    );
-
-    await user.click(screen.getByRole('button', { name: /set 50/i }));
-
-    expect(screen.getByTestId('page-size')).toHaveTextContent('50');
-  });
-
-  it('accepts a custom default page size', () => {
-    render(
-      <DataGridProvider defaultPageSize={10}>
-        <TestConsumer />
-      </DataGridProvider>,
-    );
-
-    expect(screen.getByTestId('page-size')).toHaveTextContent('10');
-  });
-});
 ```
 
-### Testing the Consumer Hook Throws Without Provider
+Test patterns for providers:
+- **Default values** — render with provider, assert defaults appear
+- **State updates** — interact with consumer, assert context updates
+- **Custom initial values** — pass props to provider, assert consumer reads them
+- **Missing provider** — `renderHook(() => useContext())` should throw
 
-```typescript
-import { describe, it, expect } from 'vitest';
-import { renderHook } from '@testing-library/react';
-import { useDataGridContext } from './datagrid-context';
+### Custom Render Wrapper
 
-describe('useDataGridContext', () => {
-  it('throws when used outside a provider', () => {
-    expect(() => {
-      renderHook(() => useDataGridContext());
-    }).toThrow('useDataGridContext must be used within a <DataGridProvider>');
-  });
-});
-```
-
-## Custom Render Wrapper
-
-When components depend on providers, create a custom render function to avoid wrapping every test:
-
-### src/test-utils.tsx
+When components depend on providers, create `src/test-utils.tsx` that wraps `render` with all needed providers:
 
 ```typescript
 import { render, type RenderOptions } from '@testing-library/react';
 import { type ReactElement, type ReactNode } from 'react';
-import { DataGridProvider } from './context/datagrid-context';
 
-interface WrapperProps {
-  children: ReactNode;
+function AllProviders({ children }: { children: ReactNode }) {
+  return <DataGridProvider>{children}</DataGridProvider>;
 }
 
-function AllProviders({ children }: WrapperProps) {
-  return (
-    <DataGridProvider>
-      {children}
-    </DataGridProvider>
-  );
-}
-
-function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
+export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
   return render(ui, { wrapper: AllProviders, ...options });
 }
-
-export { renderWithProviders as render, screen, within, waitFor } from '@testing-library/react';
-```
-
-Then import from test-utils instead of `@testing-library/react`:
-
-```typescript
-import { render, screen } from '../test-utils';
 ```
 
 ## Async Testing
 
-### Waiting for State Updates
-
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { UserProfile } from './UserProfile';
+// Use findBy* for elements that appear after async operations
+expect(await screen.findByRole('heading', { name: /alice/i })).toBeInTheDocument();
 
-describe('UserProfile', () => {
-  it('loads and displays user data', async () => {
-    render(<UserProfile userId={1} />);
-
-    // Loading state
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
-
-    // Wait for data to appear
-    expect(await screen.findByRole('heading', { name: /alice/i })).toBeInTheDocument();
-
-    // Loading state should be gone
-    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-  });
-});
-```
-
-### Waiting for Disappearance
-
-```typescript
-it('hides the modal after saving', async () => {
-  const user = userEvent.setup();
-  render(<EditModal isOpen />);
-
-  await user.click(screen.getByRole('button', { name: /save/i }));
-
-  await waitFor(() => {
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  });
+// Use waitFor for disappearance or complex async assertions
+await waitFor(() => {
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 ```
 
@@ -481,33 +330,12 @@ vi.mock('@inertiajs/react', () => ({
 
 ### Mocking Inertia's router
 
-```typescript
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { router } from '@inertiajs/react';
-import { DeleteButton } from './DeleteButton';
+Use `vi.importActual` to preserve real exports while overriding `router`:
 
+```typescript
 vi.mock('@inertiajs/react', async () => {
   const actual = await vi.importActual('@inertiajs/react');
-  return {
-    ...actual,
-    router: {
-      delete: vi.fn(),
-    },
-  };
-});
-
-describe('DeleteButton', () => {
-  it('navigates via Inertia router on confirm', async () => {
-    const user = userEvent.setup();
-    render(<DeleteButton assetId={1} />);
-
-    await user.click(screen.getByRole('button', { name: /delete/i }));
-    await user.click(screen.getByRole('button', { name: /confirm/i }));
-
-    expect(router.delete).toHaveBeenCalledWith('/assets/1');
-  });
+  return { ...actual, router: { delete: vi.fn() } };
 });
 ```
 
@@ -586,339 +414,35 @@ Test the CVA function as a unit (belongs in `ts-test` territory). Test the rende
 
 ### Testing Radix Primitive Behavior
 
-Radix primitives handle accessibility, keyboard navigation, and state management. Test the user-facing behavior, not the Radix internals:
+Test the user-facing behavior, not Radix internals. Key patterns:
 
-#### Open/Close State
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from './select';
-
-describe('Select', () => {
-  it('opens the dropdown when the trigger is clicked', async () => {
-    const user = userEvent.setup();
-    render(
-      <Select>
-        <SelectTrigger>
-          <SelectValue placeholder="Pick one" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="a">Option A</SelectItem>
-          <SelectItem value="b">Option B</SelectItem>
-        </SelectContent>
-      </Select>,
-    );
-
-    // Content not visible initially
-    expect(screen.queryByRole('option')).not.toBeInTheDocument();
-
-    // Open
-    await user.click(screen.getByRole('combobox'));
-
-    // Options visible
-    expect(screen.getByRole('option', { name: 'Option A' })).toBeVisible();
-    expect(screen.getByRole('option', { name: 'Option B' })).toBeVisible();
-  });
-
-  it('selects an option and closes', async () => {
-    const user = userEvent.setup();
-    const onValueChange = vi.fn();
-    render(
-      <Select onValueChange={onValueChange}>
-        <SelectTrigger>
-          <SelectValue placeholder="Pick one" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="a">Option A</SelectItem>
-        </SelectContent>
-      </Select>,
-    );
-
-    await user.click(screen.getByRole('combobox'));
-    await user.click(screen.getByRole('option', { name: 'Option A' }));
-
-    expect(onValueChange).toHaveBeenCalledWith('a');
-  });
-});
-```
-
-#### Keyboard Navigation
-
-```typescript
-it('supports keyboard navigation', async () => {
-  const user = userEvent.setup();
-  render(
-    <Select>
-      <SelectTrigger>
-        <SelectValue placeholder="Pick one" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="a">Option A</SelectItem>
-        <SelectItem value="b">Option B</SelectItem>
-      </SelectContent>
-    </Select>,
-  );
-
-  // Open with Enter
-  screen.getByRole('combobox').focus();
-  await user.keyboard('{Enter}');
-
-  // Navigate with arrow keys
-  await user.keyboard('{ArrowDown}');
-
-  // Select with Enter
-  await user.keyboard('{Enter}');
-});
-```
-
-#### Dialog / Modal
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { Dialog, DialogTrigger, DialogContent, DialogTitle } from './dialog';
-
-describe('Dialog', () => {
-  it('opens when the trigger is clicked', async () => {
-    const user = userEvent.setup();
-    render(
-      <Dialog>
-        <DialogTrigger>Open</DialogTrigger>
-        <DialogContent>
-          <DialogTitle>My Dialog</DialogTitle>
-          <p>Content here</p>
-        </DialogContent>
-      </Dialog>,
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Open' }));
-
-    expect(screen.getByRole('dialog')).toBeVisible();
-    expect(screen.getByText('My Dialog')).toBeInTheDocument();
-  });
-
-  it('closes on Escape', async () => {
-    const user = userEvent.setup();
-    render(
-      <Dialog defaultOpen>
-        <DialogContent>
-          <DialogTitle>My Dialog</DialogTitle>
-        </DialogContent>
-      </Dialog>,
-    );
-
-    expect(screen.getByRole('dialog')).toBeVisible();
-
-    await user.keyboard('{Escape}');
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    });
-  });
-
-  it('traps focus inside the dialog', async () => {
-    const user = userEvent.setup();
-    render(
-      <Dialog defaultOpen>
-        <DialogContent>
-          <DialogTitle>My Dialog</DialogTitle>
-          <button>First</button>
-          <button>Second</button>
-        </DialogContent>
-      </Dialog>,
-    );
-
-    // Tab cycles through focusable elements inside the dialog
-    await user.tab();
-    expect(screen.getByRole('button', { name: 'First' })).toHaveFocus();
-
-    await user.tab();
-    expect(screen.getByRole('button', { name: 'Second' })).toHaveFocus();
-  });
-});
-```
+- **Open/close** — click trigger, assert content visible/hidden via roles (`combobox`, `option`, `dialog`)
+- **Selection** — click option, assert `onValueChange` called with correct value
+- **Keyboard** — focus trigger, `user.keyboard('{Enter}')` to open, `{ArrowDown}` to navigate, `{Enter}` to select
+- **Dialog close** — `user.keyboard('{Escape}')`, use `waitFor` to assert disappearance (animation delay)
+- **Focus trapping** — `user.tab()` inside dialog, assert focus stays within
 
 ### Testing Compound Components
 
-Test compound components as an assembled unit — the way a consumer uses them:
+Test as an assembled unit. Assert all parts render, `className` passes through to `data-slot` elements, and additional props spread correctly.
 
-```typescript
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './card';
+### Testing `asChild` / Slot
 
-describe('Card', () => {
-  it('renders all compound parts', () => {
-    render(
-      <Card>
-        <CardHeader>
-          <CardTitle>Title</CardTitle>
-          <CardDescription>Description</CardDescription>
-        </CardHeader>
-        <CardContent>Body content</CardContent>
-        <CardFooter>Footer content</CardFooter>
-      </Card>,
-    );
-
-    expect(screen.getByText('Title')).toBeInTheDocument();
-    expect(screen.getByText('Description')).toBeInTheDocument();
-    expect(screen.getByText('Body content')).toBeInTheDocument();
-    expect(screen.getByText('Footer content')).toBeInTheDocument();
-  });
-
-  it('passes through className to each part', () => {
-    const { container } = render(
-      <Card className="custom-card">
-        <CardHeader className="custom-header">
-          <CardTitle>Title</CardTitle>
-        </CardHeader>
-      </Card>,
-    );
-
-    expect(container.querySelector('[data-slot="card"]')).toHaveClass('custom-card');
-    expect(container.querySelector('[data-slot="card-header"]')).toHaveClass('custom-header');
-  });
-
-  it('spreads additional props', () => {
-    render(
-      <Card data-testid="my-card" aria-label="Asset card">
-        <CardContent>Content</CardContent>
-      </Card>,
-    );
-
-    expect(screen.getByTestId('my-card')).toHaveAttribute('aria-label', 'Asset card');
-  });
-});
-```
-
-### Testing the `asChild` / Slot Pattern
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { Button } from './button';
-
-describe('Button asChild', () => {
-  it('renders as a button by default', () => {
-    render(<Button>Click</Button>);
-
-    expect(screen.getByRole('button', { name: 'Click' })).toBeInTheDocument();
-  });
-
-  it('renders as the child element when asChild is true', () => {
-    render(
-      <Button asChild>
-        <a href="/about">About</a>
-      </Button>,
-    );
-
-    const link = screen.getByRole('link', { name: 'About' });
-    expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/about');
-    // Should NOT render a button element
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
-  });
-
-  it('merges className onto the child element', () => {
-    render(
-      <Button asChild variant="outline" className="extra">
-        <a href="/about">About</a>
-      </Button>,
-    );
-
-    const link = screen.getByRole('link', { name: 'About' });
-    expect(link).toHaveClass('extra');
-  });
-});
-```
+Three cases: renders as default element, renders as child element when `asChild={true}` (assert role changes, e.g., button → link), and merges className onto child.
 
 ### Testing Context-Dependent Components
 
-For components that require a provider (Sidebar, DataGrid, etc.), create a wrapper:
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { SidebarProvider, Sidebar, SidebarTrigger } from './sidebar';
-
-function renderSidebar(props = {}) {
-  return render(
-    <SidebarProvider {...props}>
-      <SidebarTrigger aria-label="Toggle sidebar" />
-      <Sidebar>
-        <nav>Sidebar content</nav>
-      </Sidebar>
-    </SidebarProvider>,
-  );
-}
-
-describe('Sidebar', () => {
-  it('starts expanded by default', () => {
-    renderSidebar();
-
-    expect(screen.getByText('Sidebar content')).toBeVisible();
-    expect(screen.getByRole('complementary')).toHaveAttribute('data-state', 'expanded');
-  });
-
-  it('collapses when the trigger is clicked', async () => {
-    const user = userEvent.setup();
-    renderSidebar();
-
-    await user.click(screen.getByRole('button', { name: /toggle sidebar/i }));
-
-    expect(screen.getByRole('complementary')).toHaveAttribute('data-state', 'collapsed');
-  });
-
-  it('starts collapsed when defaultOpen is false', () => {
-    renderSidebar({ defaultOpen: false });
-
-    expect(screen.getByRole('complementary')).toHaveAttribute('data-state', 'collapsed');
-  });
-});
-```
+Create a local `renderWithProvider()` helper that wraps the component in its required provider. Test default state, state changes via interaction, and custom initial props.
 
 ### Querying by `data-slot`
 
-When a component part has no accessible role, use `data-slot` as a fallback query:
-
-```typescript
-import { within } from '@testing-library/react';
-
-it('renders content inside the card body', () => {
-  const { container } = render(
-    <Card>
-      <CardContent>Important text</CardContent>
-    </Card>,
-  );
-
-  const content = container.querySelector('[data-slot="card-content"]')!;
-  expect(within(content).getByText('Important text')).toBeInTheDocument();
-});
-```
-
-**Prefer role queries first.** Only fall back to `data-slot` when the element has no semantic role and adding one would be incorrect.
+When a component part has no accessible role, fall back to `container.querySelector('[data-slot="card-content"]')` with `within()`. **Prefer role queries first.**
 
 ### Radix Portal Gotchas
 
-Radix renders some content (Select dropdown, Dialog, Popover) into a portal outside the component tree. This means:
-
 1. **`screen` queries still work** — Testing Library queries the entire document, not just the render container.
-2. **`container.querySelector` won't find portal content** — use `screen` queries or `document.querySelector` instead.
-3. **Animation states** — Radix uses `data-state="open"` / `data-state="closed"` with CSS animations. Use `waitFor` when asserting disappearance after close:
-
-```typescript
-// Wrong — element may still be animating out
-expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-
-// Right — wait for animation to complete
-await waitFor(() => {
-  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-});
-```
+2. **`container.querySelector` won't find portal content** — use `screen` queries instead.
+3. **Animation states** — use `waitFor` when asserting disappearance after close (Radix animates with `data-state`).
 
 ## What This Skill Does NOT Cover
 

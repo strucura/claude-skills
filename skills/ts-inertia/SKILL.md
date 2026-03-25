@@ -339,50 +339,9 @@ export default function Create({ categories }: AssetCreateProps) {
 
 ### Edit Page (Pre-filled Form)
 
-```typescript
-import { Head, useForm } from '@inertiajs/react';
-import type { FormEventHandler } from 'react';
-import AppLayout from '@/layouts/AppLayout';
-import type { SelectOption } from '@/types';
-
-interface AssetEditProps {
-  asset: {
-    id: number;
-    name: string;
-    description: string | null;
-    status: string;
-    category_id: number | null;
-  };
-  categories: SelectOption[];
-}
-
-export default function Edit({ asset, categories }: AssetEditProps) {
-  const { data, setData, put, processing, errors } = useForm({
-    name: asset.name,
-    description: asset.description ?? '',
-    status: asset.status,
-    category_id: asset.category_id?.toString() ?? '',
-  });
-
-  const submit: FormEventHandler = (e) => {
-    e.preventDefault();
-    put(route('assets.update', asset.id));
-  };
-
-  return (
-    <AppLayout>
-      <Head title={`Edit ${asset.name}`} />
-
-      <form onSubmit={submit}>
-        {/* Same fields as create, pre-filled from asset */}
-        <button type="submit" disabled={processing}>
-          Update Asset
-        </button>
-      </form>
-    </AppLayout>
-  );
-}
-```
+Same structure as Create, with two differences:
+1. **Props include the existing model** — `useForm` initializes from `asset` prop values (use `?? ''` for nullable fields)
+2. **Uses `put` instead of `post`** — `put(route('assets.update', asset.id))`
 
 ## Layout Components
 
@@ -423,35 +382,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
 ### Nested Layout
 
-For sections with sub-navigation (e.g., Settings):
-
-```typescript
-import { Link } from '@inertiajs/react';
-import type { ReactNode } from 'react';
-import AppLayout from './AppLayout';
-
-interface SettingsLayoutProps {
-  children: ReactNode;
-}
-
-export default function SettingsLayout({ children }: SettingsLayoutProps) {
-  return (
-    <AppLayout>
-      <div>
-        <aside>
-          <nav>
-            <Link href={route('settings.profile')}>Profile</Link>
-            <Link href={route('settings.security')}>Security</Link>
-            <Link href={route('settings.team')}>Team</Link>
-          </nav>
-        </aside>
-
-        <div>{children}</div>
-      </div>
-    </AppLayout>
-  );
-}
-```
+For sections with sub-navigation (e.g., Settings), create a layout that wraps `AppLayout` and adds sidebar nav. Pages using the nested layout get both the app chrome and section nav.
 
 ## Inertia Form Handling
 
@@ -480,55 +411,16 @@ const {
 
 ### Form Submission Options
 
-```typescript
-post(route('assets.store'), {
-  onSuccess: () => {
-    // Runs after successful submission (no validation errors)
-    reset();
-  },
-  onError: (errors) => {
-    // Runs when validation errors are returned
-    // errors is the same as the errors object from useForm
-  },
-  onFinish: () => {
-    // Runs after submission completes (success or error)
-  },
-  preserveScroll: true,    // Don't scroll to top on success
-  preserveState: true,     // Keep component state on validation error (default for POST/PUT/PATCH)
-});
-```
+`post`/`put`/`patch`/`delete` accept an options object:
+- **`onSuccess`** — runs after successful submission (e.g., `reset()`)
+- **`onError`** — runs when validation errors are returned
+- **`onFinish`** — runs after completion regardless of outcome
+- **`preserveScroll: true`** — don't scroll to top on success
+- **`preserveState: true`** — keep component state on validation error (default for POST/PUT/PATCH)
 
-### Data Transformation
+Use `transform((data) => ({ ...data, field: transformed }))` before submission to modify data without changing form state.
 
-```typescript
-const { data, setData, post, transform } = useForm({
-  name: '',
-  tags: [] as string[],
-});
-
-const submit: FormEventHandler = (e) => {
-  e.preventDefault();
-
-  transform((data) => ({
-    ...data,
-    tags: data.tags.filter(Boolean), // Remove empty strings
-  }));
-
-  post(route('assets.store'));
-};
-```
-
-### Delete with Confirmation
-
-```typescript
-import { router } from '@inertiajs/react';
-
-function handleDelete(assetId: number) {
-  if (confirm('Are you sure?')) {
-    router.delete(route('assets.destroy', assetId));
-  }
-}
-```
+For delete operations, use `router.delete(route('assets.destroy', id))` directly (no `useForm` needed).
 
 ## Navigation
 
@@ -561,21 +453,7 @@ import { Link } from '@inertiajs/react';
 
 ### Programmatic Navigation
 
-```typescript
-import { router } from '@inertiajs/react';
-
-// Visit a page
-router.visit(route('assets.show', asset.id));
-
-// Reload the current page (re-fetch props)
-router.reload();
-
-// Reload only specific props
-router.reload({ only: ['assets'] });
-
-// Replace history entry (back button skips this page)
-router.visit(route('assets.index'), { replace: true });
-```
+Use `router.visit()` for navigation, `router.reload()` to re-fetch props (with optional `{ only: ['assets'] }` for partial reloads), and `{ replace: true }` to replace the history entry.
 
 ## Ziggy Route Helper
 
