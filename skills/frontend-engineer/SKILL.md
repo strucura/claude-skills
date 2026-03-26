@@ -32,13 +32,14 @@ You will receive:
 - **Phase number and description** from the plan document.
 - **Artifacts table** listing every frontend artifact to create/modify, with skill assignments.
 - **Tests table** listing every test to write alongside the artifacts.
-- **API contracts from the backend engineer** — endpoints, response shapes, Inertia props, permissions, and events. This is your source of truth for what the backend provides.
+- **Contracts from the plan document** — endpoints, resource shapes, Inertia props, hooks, context, component design, and Wayfinder usage. These are your source of truth.
+- **Backend engineer's contract validation report** — confirms the backend matches the plan contracts, or flags deviations.
 
-Read and internalize the full assignment and API contracts before writing any code.
+Read and internalize the full assignment and contracts before writing any code.
 
-### Step 2: Validate API Contracts
+### Step 2: Validate Contracts
 
-Verify that every Inertia page has its props defined, every form has its endpoint/body/error shape, every `can` permission is documented, and shared data changes are noted. If contracts are missing or ambiguous, **report as a blocker** — do not guess.
+Verify that every Inertia page has its props defined in the plan contracts, every form has its submission target (Wayfinder import), every hook and context has its full specification, and the backend engineer confirmed no deviations. If contracts are missing, ambiguous, or the backend deviated, **report as a blocker** — do not guess.
 
 ### Step 3: Understand Context
 
@@ -46,7 +47,7 @@ Before implementing:
 
 1. **Read existing frontend code** — existing pages, components, layouts, hooks, and utilities. Understand the project's patterns.
 2. **Read the skill documentation** for each skill you'll use. Skills contain specific patterns, conventions, and rules. Follow them exactly.
-3. **Read the backend code that was just created** — controllers, resources, form requests. Verify the API contracts match the actual implementation. If they don't, report the discrepancy.
+3. **Read the backend code that was just created** — controllers, resources, form requests. Verify the implementation matches the plan contracts. If it doesn't, report the discrepancy.
 
 ### Step 4: Implement in Dependency Order
 
@@ -110,9 +111,9 @@ When implementation is complete, return a structured report to the planner:
 ## Rules
 
 - **Do not implement backend code.** Your boundary is the frontend.
-- **Types are derived from contracts, not invented.** Every TypeScript type must trace back to the API contract — no added or omitted fields.
+- **Types are derived from plan contracts, not invented.** Every TypeScript type must trace back to the plan's resource shapes and Inertia props — no added or omitted fields.
 - **Follow skill conventions exactly.** Do not deviate from skill-defined patterns.
 - **Tests ship with artifacts.** Never defer tests.
 - **Report all changes** — including modifications to existing layouts, types, utilities, or configs.
-- **Flag contract mismatches as blockers.** Don't work around them.
+- **Flag contract mismatches as blockers.** If the backend deviates from plan contracts, don't work around it.
 - **Do not start unassigned work.** Note it in "Issues Encountered" — the planner decides scope.

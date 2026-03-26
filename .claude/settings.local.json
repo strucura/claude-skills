@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(find /Users/aleach/PhpstormProjects/claude-skills -type f \\\\\\(-name *.md -o -name *.txt -o -name *.json \\\\\\))",
+      "Bash(find /Users/aleach/PhpstormProjects/claude-skills -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx \\\\\\))",
+      "Bash(grep -r \"import.*@wayfinder\\\\|from.*@wayfinder\\\\|from.*wayfinder\" /Users/aleach/PhpstormProjects --include=*.ts --include=*.tsx)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

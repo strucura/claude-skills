@@ -144,11 +144,11 @@ If the user pushes back on specific items, adjust. If they want to keep somethin
 
 ### Step 5: Generate the Plan
 
-Once the proposal is approved, **read the `plan` skill's SKILL.md** to understand the plan document format, phase design rules, engineer/model assignment conventions, and downstream steps (gap analysis, code review, documentation sync). Then write the plan document to `docs/plans/{refactor-name}.md` using that format.
+Once the proposal is approved, **read the `plan` skill's SKILL.md** to understand the plan document format, phase design rules, contract specifications, engineer/model assignment conventions, and downstream steps (user approval, gap analysis, code review, documentation sync). Then write the plan document to `docs/plans/{refactor-name}.md` using that format.
 
-The approved proposal becomes the plan's Problem Statement and Decisions Made sections. The tech debt inventory informs the phase breakdown. The compatibility mode determines whether migration/deprecation phases are needed.
+The approved proposal becomes the plan's Problem Statement and Decisions Made sections. The tech debt inventory informs the phase breakdown. The compatibility mode determines whether migration/deprecation phases are needed. Each phase must include full contracts — endpoints, data objects, action signatures, resource shapes, Inertia props, hooks (with state/methods/tests), context (with state/methods/consumer hook/tests), and component design with Wayfinder usage.
 
-After writing the plan, invoke the `gap-analysis` skill against it, then update the plan with findings — exactly as the `plan` skill prescribes.
+Present the plan to the user for approval (plan Phase 4). Once approved, invoke the `gap-analysis` skill against it, then update the plan with findings — exactly as the `plan` skill prescribes.
 
 #### Refactor-Specific Phase Design Rules
 

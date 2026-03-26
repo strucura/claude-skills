@@ -108,13 +108,17 @@ Every subagent spawned during implementation must specify a model. Choose the ch
 
 Each phase in the plan document must include a `**Model:**` tag alongside the engineer assignment.
 
-#### Passing API Contracts
+#### Passing Contracts to Engineers
 
-The planner extracts API contracts from the backend engineer's report and passes them verbatim to the frontend engineer. Do not summarize or paraphrase.
+Contracts are defined in the plan, not discovered during implementation. The backend engineer implements against the contracts. The frontend engineer consumes them. If an engineer discovers the contract is wrong during implementation, they report the discrepancy — the planner updates the contract and both engineers adjust.
 
-### Phase 4: Gap Analysis
+### Phase 4: User Approval
 
-Once the plan is written, invoke the `gap-analysis` skill against it. Hand it the plan document, the relevant codebase areas, and any specs or requirements that informed the plan. The gap analysis skill will tear apart the plan from every angle — business requirements, technical completeness, functionality holes, testing coverage, and documentation.
+Present the plan to the user before proceeding. Walk through the contracts — endpoints, data objects, action signatures, resource shapes, Inertia props, hooks, context, and component design. The user must explicitly approve the plan before gap analysis or implementation begins. If the user requests changes, revise the plan and present again.
+
+### Phase 5: Gap Analysis
+
+Once the plan is approved, invoke the `gap-analysis` skill against it. Hand it the plan document, the relevant codebase areas, and any specs or requirements that informed the plan. The gap analysis skill will tear apart the plan from every angle — business requirements, technical completeness, functionality holes, testing coverage, and documentation.
 
 A plan without a gap analysis is a plan with unknown unknowns. The gap analysis skill is deliberately combative — it will fight for gaps it finds, and that's the point. Every gap it identifies should be either:
 
@@ -124,7 +128,7 @@ A plan without a gap analysis is a plan with unknown unknowns. The gap analysis 
 
 Update the plan document with the results. Critical and major gaps from the analysis should be reflected in the "Gaps" section of the plan. If the gap analysis surfaces issues that change the implementation approach, revise the phases accordingly.
 
-### Phase 5: Code Review After Each Phase
+### Phase 6: Code Review After Each Phase
 
 Every phase in the plan must include a code review step.
 
@@ -159,7 +163,7 @@ After implementation, run the `code-review` skill as a subagent against all arti
 
 This ensures every phase in the plan explicitly accounts for the review step.
 
-### Phase 6: Update Documentation
+### Phase 7: Update Documentation
 
 After all implementation phases are complete, invoke the `update-docs` skill as a subagent. Pass it:
 
@@ -176,7 +180,7 @@ The `update-docs` skill will audit the package source code against its documenta
 
 Undocumented features are invisible features. Documentation that contradicts the code is worse than no documentation.
 
-### Phase 7: Keep the Plan Current
+### Phase 8: Keep the Plan Current
 
 As the conversation continues and decisions evolve:
 
@@ -236,24 +240,165 @@ Work is broken into small, committable phases. Each phase is a single reviewable
 | `AssetControllerTest@index` | `tests/Feature/.../Controllers/` | Returns paginated resources, passes `can` array |
 | `AssetControllerTest@show` | `tests/Feature/.../Controllers/` | Returns single resource via route model binding |
 
-#### Expected API Contracts
+#### Contracts
 
-{Populated by the planner based on the artifacts. The backend engineer will confirm or correct these in its report.}
+These are the source of truth. Engineers implement against these — not alongside them. If a contract is wrong, fix it here before building.
 
+**Endpoints:**
 ```
 GET /assets
   Auth: assets.view
+  Request: IndexAssetRequest
   Response: AssetResource (paginated)
-  Response Shape: { id: int, name: string, ... }
+  Status: 200, 403
 
 GET /assets/{asset}
   Auth: assets.view
+  Request: ShowAssetRequest
   Response: AssetResource
-  Response Shape: { id: int, name: string, ... }
-
-Inertia Props (Assets/Index):
-  Props: { assets: Paginated<Asset>, can: { createAsset: bool } }
+  Status: 200, 403, 404
 ```
+
+**Data Objects:**
+```php
+AssetData::from([
+    'name' => string,
+    'category_id' => int,
+    'status' => AssetStatus,
+])
+```
+
+**Action Signatures:**
+```php
+CreateAssetAction::handle(AssetData $data): Asset
+```
+
+**Resource Shape:**
+```typescript
+interface Asset {
+  id: number
+  name: string
+  category: { id: number; name: string } // whenLoaded
+  created_at: string // ISO 8601
+  updated_at: string // ISO 8601
+}
+```
+
+**Inertia Props:**
+```typescript
+// Assets/Index
+{ assets: PaginatedResponse<Asset>, can: { createAsset: boolean } }
+
+// Assets/Show
+{ asset: Asset, can: { editAsset: boolean, deleteAsset: boolean } }
+```
+
+**Custom Hooks:**
+```typescript
+useAssetFilters(defaults?: Partial<AssetFilters>)
+  State:
+    filters: AssetFilters          // { status: string | null, category_id: number | null, search: string }
+    isDirty: boolean               // true when filters differ from defaults
+  Methods:
+    setFilter(key, value): void    // updates a single filter key
+    reset(): void                  // restores defaults
+    toQueryString(): string        // serializes non-null filters to URL params
+  Side effects:
+    syncs filters to URL query params via router.replace on change
+  Tests:
+    - initializes with default filter values
+    - setFilter updates the specified key
+    - isDirty returns true after a filter changes
+    - reset restores all filters to defaults
+    - toQueryString omits null values
+    - syncs to URL on filter change
+```
+
+```typescript
+useAssetActions(asset: Asset)
+  State:
+    isDeleting: boolean
+    deleteError: string | null
+  Methods:
+    confirmDelete(): void          // shows confirmation dialog, calls destroy on confirm
+  Wayfinder:
+    import { destroy } from "@/actions/App/Http/Controllers/AssetController"
+  Side effects:
+    on success: router.visit to assets.index
+  Tests:
+    - isDeleting is false initially
+    - confirmDelete sets isDeleting to true
+    - successful delete navigates to index
+    - failed delete sets deleteError
+```
+
+{List every custom hook this phase requires with full state, methods, Wayfinder imports, side effects, and test cases. Only list hooks that need to be created. Omit if none needed.}
+
+**React Context:** _(omit if none needed)_
+```typescript
+AssetFormContext
+  Provided by: <AssetFormProvider asset?: Asset>
+  State:
+    form: InertiaForm<AssetFormData>   // { name: string, category_id: number | null, status: AssetStatus }
+    categories: Category[]              // passed from Inertia props, cached in context
+    isDirty: boolean
+    processing: boolean
+    errors: Partial<Record<keyof AssetFormData, string>>
+  Methods:
+    setField(key, value): void
+    submit(): void                      // calls form.submit(store()) or form.submit(update(asset.id))
+    reset(): void
+  Consumer hook:
+    useAssetForm(): AssetFormContextValue  // throws if used outside provider
+  Wayfinder:
+    import { store, update } from "@/actions/App/Http/Controllers/AssetController"
+  Tests:
+    - useAssetForm throws when used outside provider
+    - initializes with empty form data when no asset prop
+    - initializes with asset values when asset prop provided
+    - setField updates the correct field
+    - submit calls store() for new assets
+    - submit calls update(asset.id) for existing assets
+    - processing reflects form submission state
+    - errors populated on 422 response
+    - reset clears form to initial state
+```
+
+{List every React context this phase requires. Include the provider component, all state fields with types, all methods with signatures, the consumer hook, Wayfinder imports, and test cases. Same level of detail as hooks.}
+
+**Component Design & Wayfinder Usage:**
+```
+AssetIndexPage
+  ├── AssetDataGrid (datagrid widget, filterable by status/category)
+  │     hooks: useAssetFilters()
+  │     import { show } from "@/actions/.../AssetController"
+  │     row click: show(asset.id)
+  └── CreateAssetButton (guarded by can.createAsset)
+        import { create } from "@/actions/.../AssetController"
+        href: create()
+
+AssetShowPage
+  ├── AssetHeader (name, status badge, edit/delete actions)
+  │     hooks: useAssetActions(asset)
+  │     import { edit } from "@/actions/.../AssetController"
+  │     edit link: edit(asset.id)
+  │     delete: confirmDelete()
+  ├── AssetDetails (category, dates, metadata)
+  └── AssetActivityChart (chart widget, optional)
+
+AssetCreatePage
+  └── <AssetFormProvider>
+        └── AssetForm
+              hooks: useAssetForm()
+              fields: name (text), category_id (select from categories), status (select)
+              submit: submit()
+
+AssetEditPage
+  └── <AssetFormProvider asset={asset}>
+        └── AssetForm (same component, pre-populated via context)
+```
+
+{Include component hierarchy for every page. Show which components are new vs. existing, which are guarded by permissions, which hooks and context each component uses, and which Wayfinder controller functions each component imports.}
 
 #### Frontend Artifacts
 

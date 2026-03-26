@@ -62,36 +62,11 @@ For each artifact, **invoke the corresponding skill as a subagent**. Pass the sk
 - The relevant context (models, related artifacts, phase requirements).
 - The test cases from the tests table.
 
-### Step 4: Track API Contracts
+### Step 4: Validate Against Contracts
 
-As you build, **document every API surface** that the frontend will consume. This is critical — the frontend engineer cannot begin until they know what you've built.
+The plan document defines contracts upfront — endpoints, data objects, action signatures, resource shapes, and Inertia props. Your job is to implement these contracts exactly, not invent new ones.
 
-Track the following for every endpoint or response shape:
-
-#### Endpoints
-```
-METHOD /route/path
-  Auth: {permission or policy}
-  Request: {FormRequest class}
-  Request Body: { field: type, field: type, ... }
-  Response: {Resource class}
-  Response Shape: { field: type, field: type, ... }
-  Status Codes: { 200: success, 403: unauthorized, 422: validation, ... }
-```
-
-#### Inertia Props
-```
-Page: {Inertia page name}
-  Props: { prop: type, prop: type, ... }
-  Shared Data Changes: { key: type, ... }
-```
-
-#### Events & Side Effects
-```
-Event: {event class}
-  Payload: { field: type, ... }
-  Triggered By: {action or controller}
-```
+As you build, **verify your implementation matches the contracts**. If you discover a contract is wrong (missing field, wrong type, impossible signature), **report the discrepancy** in your report. Do not silently deviate — the planner will update the contract and notify the frontend engineer.
 
 ### Step 5: Report Back
 
@@ -114,9 +89,11 @@ When implementation is complete, return a structured report to the planner:
 |---|---|---|
 | `{TestName}` | `{path}` | Created |
 
-### API Contracts
+### Contract Validation
 
-{Full endpoint, Inertia prop, and event documentation as described in Step 4.}
+| Contract Item | Status | Notes |
+|---|---|---|
+| {endpoint/data object/action/resource} | Matches/Deviation | {details if deviation} |
 
 ### Changes to Existing Code
 
@@ -137,7 +114,7 @@ When implementation is complete, return a structured report to the planner:
 
 - **Follow skill conventions exactly.** Do not deviate from skill-defined patterns.
 - **Do not touch frontend code.** Your boundary is the Laravel backend.
-- **Document every API surface.** Missing or incorrect contracts cause integration failures.
+- **Implement contracts exactly.** The plan defines the contracts. If a contract is wrong, report the discrepancy — don't silently deviate.
 - **Tests ship with artifacts.** Never defer tests.
 - **Report all changes** — including modifications to existing files (models, routes, configs, migrations).
 - **Flag deviations and unassigned work** in "Issues Encountered". The planner decides scope.
