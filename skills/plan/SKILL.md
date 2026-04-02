@@ -112,13 +112,36 @@ Each phase in the plan document must include a `**Model:**` tag alongside the en
 
 Contracts are defined in the plan, not discovered during implementation. The backend engineer implements against the contracts. The frontend engineer consumes them. If an engineer discovers the contract is wrong during implementation, they report the discrepancy — the planner updates the contract and both engineers adjust.
 
+#### How to Invoke Subagents
+
+Every skill invocation during planning or implementation **must use the `Agent` tool** — not the `Skill` tool, not inline reasoning. The `Skill` tool runs in the current context; the `Agent` tool spawns an independent subprocess with its own context, tools, and model.
+
+**Mechanical steps for every subagent invocation:**
+
+1. **Read the skill's `SKILL.md`** from the plugin directory (e.g. `skills/gap-analysis/SKILL.md`) to get the full instruction set.
+2. **Call the `Agent` tool** with:
+   - `subagent_type: "general-purpose"`
+   - `model`: the model value from the phase's `**Model:**` tag — `"opus"`, `"sonnet"`, or `"haiku"`. This parameter is required; do not omit it.
+   - `prompt`: the skill's full `SKILL.md` contents followed by the phase-specific context (plan document path, files changed, phase requirements, contracts, etc.)
+3. **Wait for the agent to return** before proceeding. Subagents for the same phase that have no dependency on each other (e.g. backend artifacts that don't share state) may be run in parallel using multiple `Agent` calls in a single message.
+
+**Model mapping from the plan document:**
+
+| Plan tag | Agent `model` parameter |
+|---|---|
+| `**Model:** opus` | `"opus"` |
+| `**Model:** sonnet` | `"sonnet"` |
+| `**Model:** haiku` | `"haiku"` |
+
+Use `"sonnet"` for gap analysis, code review, and documentation sync unless the plan document specifies otherwise.
+
 ### Phase 4: User Approval
 
 Present the plan to the user before proceeding. Walk through the contracts — endpoints, data objects, action signatures, resource shapes, Inertia props, hooks, context, and component design. The user must explicitly approve the plan before gap analysis or implementation begins. If the user requests changes, revise the plan and present again.
 
 ### Phase 5: Gap Analysis
 
-Once the plan is approved, invoke the `gap-analysis` skill against it. Hand it the plan document, the relevant codebase areas, and any specs or requirements that informed the plan. The gap analysis skill will tear apart the plan from every angle — business requirements, technical completeness, functionality holes, testing coverage, and documentation.
+Once the plan is approved, **spawn a `gap-analysis` subagent using the `Agent` tool** (`subagent_type: "general-purpose"`, `model: "sonnet"`). Read `skills/gap-analysis/SKILL.md` first, then pass its contents as the start of the prompt, followed by: the path to the plan document, the relevant codebase areas to examine, and any specs or requirements that informed the plan. The gap analysis skill will tear apart the plan from every angle — business requirements, technical completeness, functionality holes, testing coverage, and documentation.
 
 A plan without a gap analysis is a plan with unknown unknowns. The gap analysis skill is deliberately combative — it will fight for gaps it finds, and that's the point. Every gap it identifies should be either:
 
@@ -132,7 +155,7 @@ Update the plan document with the results. Critical and major gaps from the anal
 
 Every phase in the plan must end with a code review followed by a commit. These are not optional steps — they are part of the phase definition.
 
-After each phase is implemented, **spawn a subagent using the `code-review` skill** to review the code changes from that phase. The subagent receives:
+After each phase is implemented, **spawn a `code-review` subagent using the `Agent` tool** (`subagent_type: "general-purpose"`, `model: "sonnet"`). Read `skills/code-review/SKILL.md` first, then pass its contents as the start of the prompt. The subagent receives:
 
 1. **The list of files changed or created in the phase** — from the artifacts table.
 2. **The phase requirements** — the phase description, artifacts table, and tests table from the plan document.
@@ -179,7 +202,7 @@ This ensures every phase in every plan explicitly accounts for the review-then-c
 
 ### Phase 7: Update Documentation
 
-After all implementation phases are complete, invoke the `update-docs` skill as a subagent. Pass it:
+After all implementation phases are complete, **spawn an `update-docs` subagent using the `Agent` tool** (`subagent_type: "general-purpose"`, `model: "haiku"`). Read `skills/update-docs/SKILL.md` first, then pass its contents as the start of the prompt, followed by:
 
 1. **The plan document** — so it knows what was built.
 2. **The list of all files changed across all phases** — from each engineer's reports.
