@@ -128,9 +128,9 @@ A plan without a gap analysis is a plan with unknown unknowns. The gap analysis 
 
 Update the plan document with the results. Critical and major gaps from the analysis should be reflected in the "Gaps" section of the plan. If the gap analysis surfaces issues that change the implementation approach, revise the phases accordingly.
 
-### Phase 6: Code Review After Each Phase
+### Phase 6: Code Review and Commit After Each Phase
 
-Every phase in the plan must include a code review step.
+Every phase in the plan must end with a code review followed by a commit. These are not optional steps — they are part of the phase definition.
 
 After each phase is implemented, **spawn a subagent using the `code-review` skill** to review the code changes from that phase. The subagent receives:
 
@@ -149,19 +149,33 @@ When the code review subagent returns findings:
 - **Blocking issues (LOGIC findings with severity "Blocking"):** Must be fixed before moving to the next phase. Update the changed files, then re-run the code review on the fixed files.
 - **Major issues:** Should be fixed in the current phase before proceeding. If fixing them would change the phase scope significantly, add them as a follow-up task in the next phase.
 - **Duplication and abstraction findings:** Evaluate whether they should be addressed now or tracked for later. If the same duplication finding appears across multiple phases, it must be addressed — it's no longer premature.
-- **Clean review:** Proceed to the next phase.
+- **Clean review:** Proceed to commit.
+
+#### Commit After Review
+
+Once the code review is clean (no blocking issues, all major issues resolved), **commit the phase using the commit message defined in the plan document**. The commit:
+
+- Must use the exact message specified in the phase's `#### Commit:` line.
+- **Must NEVER include a "Co-Authored-By: Claude" line or any AI attribution.** This is non-negotiable. Every plan document will state this explicitly in each phase.
+- Must pass all pre-commit hooks without skipping them (`--no-verify` is forbidden).
+
+Only after the commit is made does the next phase begin.
 
 #### Plan Document Integration
 
-Add a "Code Review" section to each phase in the plan document template:
+Each phase in the plan document includes a Code Review section and a Commit line:
 
 ```markdown
 #### Code Review
 
-After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address any blocking or major findings before committing.
+After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address all blocking and major findings. Re-run the review if fixes were required. Once clean, commit using the message below.
+
+**Commit policy: NEVER include "Co-Authored-By: Claude" or any AI attribution in any commit.**
+
+#### Commit: `{commit message here}`
 ```
 
-This ensures every phase in the plan explicitly accounts for the review step.
+This ensures every phase in every plan explicitly accounts for the review-then-commit sequence.
 
 ### Phase 7: Update Documentation
 
@@ -210,9 +224,15 @@ As the conversation continues and decisions evolve:
 - **Decision:** {what was decided}
   **Rationale:** {why}
 
+## Commit Policy
+
+**NEVER include "Co-Authored-By: Claude" or any AI attribution in any commit.** This applies to every commit in this plan, without exception. Any commit message that includes AI co-authorship attribution is invalid and must be amended before pushing.
+
 ## Implementation
 
 Work is broken into small, committable phases. Each phase is a single reviewable unit — it should be possible to commit and review each phase independently without leaving the codebase in a broken state. **Tests are written alongside each artifact within the same phase, not deferred.**
+
+Every phase ends with a mandatory code review followed by a commit. The review must be clean before the commit is made. The commit must use the exact message defined in the phase. **No AI co-authorship attribution in any commit.**
 
 ### Phase 1: {Short description}
 
@@ -418,7 +438,9 @@ AssetEditPage
 
 #### Code Review
 
-After implementation (each engineer separately), run the `code-review` skill as a subagent against all artifacts produced by that engineer. Address any blocking or major findings before committing.
+After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address all blocking and major findings. Re-run the review if fixes were required. Once clean, commit using the message below.
+
+**Commit policy: NEVER include "Co-Authored-By: Claude" or any AI attribution in any commit.**
 
 #### Commit: `Add read-only asset endpoints with authorization`
 
@@ -437,7 +459,7 @@ _{Same structure as Phase 1. Omit Frontend Artifacts/Tests sections if backend-o
 
 **Engineer:** Backend | Frontend | Both
 **Model:** opus | sonnet | haiku
-_{Same structure — Engineer assignment, Model, Backend/Frontend Artifacts tables, Backend/Frontend Tests tables, Expected API Contracts (for phases with backend work), Code Review, Commit message}_
+_{Same structure — Engineer assignment, Model, Backend/Frontend Artifacts tables, Backend/Frontend Tests tables, Expected API Contracts (for phases with backend work), Code Review section, Commit message. Every phase must include both a Code Review section and a Commit line. NEVER include "Co-Authored-By: Claude" or any AI attribution in any commit.}_
 
 ---
 
@@ -491,3 +513,5 @@ When assigning skills to tasks, use only skills that exist in `.claude/skills/` 
 - **Ground challenges in the codebase.** Read code and skills before claiming something is inconsistent. Don't guess.
 - **The plan is a living document.** Update it as things change. A stale plan is worse than no plan.
 - **If the user is right, say so and move on.** Being challenging doesn't mean being contrarian.
+- **Never co-author commits.** Commits must NEVER include "Co-Authored-By: Claude" or any AI attribution — not in any phase, not in any plan, not under any circumstances. Every plan document must state this explicitly in the Commit Policy section and in every phase's Code Review block.
+- **Code review before commit, always.** No phase is complete until the code review is clean and the commit is made. These steps are mandatory, not optional.

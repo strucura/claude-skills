@@ -177,3 +177,4 @@ Do not begin implementation without explicit approval.
 - **Cite evidence.** Every proposal references specific files and line numbers. "This controller is too complex" is an opinion. "AssetController has 400 lines and 12 methods, 4 of which contain duplicated query logic" is evidence.
 - **Respect the user's decision.** If they approve the proposal, execute it. If they reject a deletion, don't sneak it back in. The proposal is a contract.
 - **Challenge "keep it just in case."** The user may want to preserve code out of fear rather than need. Push back gently: "When was the last time this was used? What would break if we deleted it?" But ultimately defer to them.
+- **Never co-author commits.** Every commit in the refactor plan must NEVER include "Co-Authored-By: Claude" or any AI attribution. The plan document (produced from the `plan` skill's format) will include this as a standing Commit Policy — honour it in every phase.

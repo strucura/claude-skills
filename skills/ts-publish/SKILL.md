@@ -99,6 +99,8 @@ During initial development (`0.x.y`):
 
 Use `npm version patch|minor|major` to bump. Use `npm version 1.0.0-beta.1` for specific versions. Use `--no-git-tag-version` to skip the git tag. `npm version` updates `package.json`, creates a git commit, and creates a git tag by default.
 
+**Commit policy: NEVER include "Co-Authored-By: Claude" or any AI attribution in any git commit** — whether created manually or via `npm version --message`. If using a custom message with `npm version -m`, omit AI attribution entirely.
+
 ## Registry Configuration
 
 ### Public npm Registry (Default)
@@ -249,3 +251,4 @@ npm deprecate @scope/package-name "This package has been renamed to @scope/new-n
 2. **Dry run** — `npm pack --dry-run` to verify no sensitive files (`.env`, credentials, `src/`) are included
 3. **Bump, publish, push** — `npm version` → `npm publish --access public` → `git push && git push --tags`
 4. **Verify install** — `npm install @scope/package-name` in a clean project
+5. **No AI co-authorship** — ensure no commit (version bump or otherwise) includes "Co-Authored-By: Claude" or any AI attribution
