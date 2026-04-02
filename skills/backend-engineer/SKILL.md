@@ -57,7 +57,7 @@ Build artifacts in the correct order to avoid referencing things that don't exis
 7. **DataGrids / Charts** — widgets (if applicable). Use `datagrid` or `chart` skill.
 8. **Tests** — written alongside each artifact, not deferred. Each skill defines its testing patterns.
 
-For each artifact, **invoke the corresponding skill as a subagent**. Pass the skill:
+For each artifact, **invoke the corresponding skill as a subagent** using the `Agent` tool (`subagent_type: "general-purpose"`). The model to use is passed to you in the phase assignment — use it for every artifact subagent call. If no model is specified, default to `"sonnet"`. Pass the skill:
 - The artifact to create (class name, path, purpose).
 - The relevant context (models, related artifacts, phase requirements).
 - The test cases from the tests table.

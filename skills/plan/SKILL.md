@@ -89,8 +89,8 @@ Once consensus is reached, create the plan document.
 
 Every artifact in the plan must be assigned to either the **backend engineer** or the **frontend engineer**. This is determined by the artifact type and skill:
 
-**Backend Engineer** — uses skills: `form-request`, `action`, `resource`, `controller`, `datagrid`, `chart`
-**Frontend Engineer** — uses skills: `ts-inertia`, `shadcn-component`, `react-test`, `ts-test`, `ts-package`, `ts-publish`
+**Backend Engineer** — `strucura` marketplace skill at `~/.claude/plugins/marketplaces/laravel-skills-marketplace/skills/backend-engineer/SKILL.md` — uses artifact skills: `form-request`, `action`, `resource`, `controller`, `datagrid`, `chart`
+**Frontend Engineer** — `strucura` marketplace skill at `~/.claude/plugins/marketplaces/laravel-skills-marketplace/skills/frontend-engineer/SKILL.md` — uses artifact skills: `ts-inertia`, `shadcn-component`, `react-test`, `ts-test`, `ts-package`, `ts-publish`
 
 Each phase must be tagged with its assigned engineer in the plan document. If a phase contains artifacts for both engineers, **split it into two sub-phases**: one for backend (runs first), one for frontend (runs after backend completes).
 
@@ -118,7 +118,7 @@ Every skill invocation during planning or implementation **must use the `Agent` 
 
 **Mechanical steps for every subagent invocation:**
 
-1. **Read the skill's `SKILL.md`** from the plugin directory (e.g. `skills/gap-analysis/SKILL.md`) to get the full instruction set.
+1. **Read the skill's `SKILL.md`** from the marketplace plugin directory (e.g. `~/.claude/plugins/marketplaces/laravel-skills-marketplace/skills/gap-analysis/SKILL.md`) to get the full instruction set.
 2. **Call the `Agent` tool** with:
    - `subagent_type: "general-purpose"`
    - `model`: the model value from the phase's `**Model:**` tag — `"opus"`, `"sonnet"`, or `"haiku"`. This parameter is required; do not omit it.
@@ -135,13 +135,26 @@ Every skill invocation during planning or implementation **must use the `Agent` 
 
 Use `"sonnet"` for gap analysis, code review, and documentation sync unless the plan document specifies otherwise.
 
+#### Executing Implementation Phases
+
+When executing an implementation phase from the plan document:
+
+1. **Read the phase's `**Model:**` tag** to determine which model to use.
+2. If the phase has backend artifacts, **spawn a `backend-engineer` subagent**:
+   - Read `~/.claude/plugins/marketplaces/laravel-skills-marketplace/skills/backend-engineer/SKILL.md`
+   - Call the `Agent` tool with `subagent_type: "general-purpose"`, `model` set to the phase's model tag value, and a prompt that includes: the full `SKILL.md` contents, the plan document path, the phase number, all backend artifacts and tests from the phase, all contracts from the phase, and the **model value** so the engineer uses it for its own artifact subagents.
+3. If the phase also has frontend artifacts, **wait for the backend engineer to complete** before spawning the frontend engineer. Then spawn a `frontend-engineer` subagent with the same model, passing the full `SKILL.md` contents, the plan document path, the phase details, the backend engineer's contract validation report, and the **model value**.
+4. Never run the backend and frontend engineers in parallel — the frontend depends on the backend's contract report.
+
+The model value must be passed explicitly in the prompt so the engineer subagent can use it when spawning its own artifact-level sub-subagents.
+
 ### Phase 4: User Approval
 
 Present the plan to the user before proceeding. Walk through the contracts — endpoints, data objects, action signatures, resource shapes, Inertia props, hooks, context, and component design. The user must explicitly approve the plan before gap analysis or implementation begins. If the user requests changes, revise the plan and present again.
 
 ### Phase 5: Gap Analysis
 
-Once the plan is approved, **spawn a `gap-analysis` subagent using the `Agent` tool** (`subagent_type: "general-purpose"`, `model: "sonnet"`). Read `skills/gap-analysis/SKILL.md` first, then pass its contents as the start of the prompt, followed by: the path to the plan document, the relevant codebase areas to examine, and any specs or requirements that informed the plan. The gap analysis skill will tear apart the plan from every angle — business requirements, technical completeness, functionality holes, testing coverage, and documentation.
+Once the plan is approved, **spawn a `gap-analysis` subagent using the `Agent` tool** (`subagent_type: "general-purpose"`, `model: "sonnet"`). Read `~/.claude/plugins/marketplaces/laravel-skills-marketplace/skills/gap-analysis/SKILL.md` first, then pass its contents as the start of the prompt, followed by: the path to the plan document, the relevant codebase areas to examine, and any specs or requirements that informed the plan. The gap analysis skill will tear apart the plan from every angle — business requirements, technical completeness, functionality holes, testing coverage, and documentation.
 
 A plan without a gap analysis is a plan with unknown unknowns. The gap analysis skill is deliberately combative — it will fight for gaps it finds, and that's the point. Every gap it identifies should be either:
 
@@ -155,7 +168,7 @@ Update the plan document with the results. Critical and major gaps from the anal
 
 Every phase in the plan must end with a code review followed by a commit. These are not optional steps — they are part of the phase definition.
 
-After each phase is implemented, **spawn a `code-review` subagent using the `Agent` tool** (`subagent_type: "general-purpose"`, `model: "sonnet"`). Read `skills/code-review/SKILL.md` first, then pass its contents as the start of the prompt. The subagent receives:
+After each phase is implemented, **spawn a `code-review` subagent using the `Agent` tool** (`subagent_type: "general-purpose"`, `model: "sonnet"`). Read `~/.claude/plugins/marketplaces/laravel-skills-marketplace/skills/code-review/SKILL.md` first, then pass its contents as the start of the prompt. The subagent receives:
 
 1. **The list of files changed or created in the phase** — from the artifacts table.
 2. **The phase requirements** — the phase description, artifacts table, and tests table from the plan document.
@@ -202,7 +215,7 @@ This ensures every phase in every plan explicitly accounts for the review-then-c
 
 ### Phase 7: Update Documentation
 
-After all implementation phases are complete, **spawn an `update-docs` subagent using the `Agent` tool** (`subagent_type: "general-purpose"`, `model: "haiku"`). Read `skills/update-docs/SKILL.md` first, then pass its contents as the start of the prompt, followed by:
+After all implementation phases are complete, **spawn an `update-docs` subagent using the `Agent` tool** (`subagent_type: "general-purpose"`, `model: "haiku"`). Read `~/.claude/plugins/marketplaces/laravel-skills-marketplace/skills/update-docs/SKILL.md` first, then pass its contents as the start of the prompt, followed by:
 
 1. **The plan document** — so it knows what was built.
 2. **The list of all files changed across all phases** — from each engineer's reports.

@@ -59,7 +59,7 @@ Build artifacts in the correct order:
 4. **Inertia Pages** — page components that consume backend data. Use the `ts-inertia` skill.
 5. **Tests** — written alongside each artifact, not deferred. Use `react-test` for components/pages, `ts-test` for pure TypeScript.
 
-For each artifact, **invoke the corresponding skill as a subagent**. Pass the skill:
+For each artifact, **invoke the corresponding skill as a subagent** using the `Agent` tool (`subagent_type: "general-purpose"`). The model to use is passed to you in the phase assignment — use it for every artifact subagent call. If no model is specified, default to `"sonnet"`. Pass the skill:
 - The artifact to create (component name, path, purpose).
 - The relevant API contracts (props, endpoints, response shapes).
 - The test cases from the tests table.
