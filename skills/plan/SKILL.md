@@ -187,9 +187,20 @@ When the code review subagent returns findings:
 - **Duplication and abstraction findings:** Evaluate whether they should be addressed now or tracked for later. If the same duplication finding appears across multiple phases, it must be addressed — it's no longer premature.
 - **Clean review:** Proceed to commit.
 
+#### Update the Plan Document After Review
+
+Once the code review is clean, **update the plan document** before committing:
+
+- Mark each completed artifact in the phase's artifact tables with `[x]` or a ✓ notation.
+- Record any deviations from the original plan — changed file paths, renamed classes, dropped or added artifacts, contract changes — directly in the phase section.
+- If a contract changed during implementation (endpoint, data shape, resource field, hook signature), update the Contracts section to match what was actually built.
+- If the gap analysis or code review surfaces a new gap that wasn't addressed, add it to the Gaps section.
+
+The plan document is the source of truth. After each phase, it must reflect what was actually built, not what was originally intended.
+
 #### Commit After Review
 
-Once the code review is clean (no blocking issues, all major issues resolved), **commit the phase using the commit message defined in the plan document**. The commit:
+Once the code review is clean and the plan document is updated, **commit the phase using the commit message defined in the plan document**. The commit:
 
 - Must use the exact message specified in the phase's `#### Commit:` line.
 - **Must NEVER include a "Co-Authored-By: Claude" line or any AI attribution.** This is non-negotiable. Every plan document will state this explicitly in each phase.
@@ -204,14 +215,14 @@ Each phase in the plan document includes a Code Review section and a Commit line
 ```markdown
 #### Code Review
 
-After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address all blocking and major findings. Re-run the review if fixes were required. Once clean, commit using the message below.
+After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address all blocking and major findings. Re-run the review if fixes were required. Once clean, update the plan document to reflect what was actually built (mark completed artifacts, record any deviations, update contracts if they changed), then commit using the message below.
 
 **Commit policy: NEVER include "Co-Authored-By: Claude" or any AI attribution in any commit.**
 
 #### Commit: `{commit message here}`
 ```
 
-This ensures every phase in every plan explicitly accounts for the review-then-commit sequence.
+This ensures every phase in every plan explicitly accounts for the review-then-update-then-commit sequence.
 
 ### Phase 7: Update Documentation
 
@@ -474,7 +485,7 @@ AssetEditPage
 
 #### Code Review
 
-After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address all blocking and major findings. Re-run the review if fixes were required. Once clean, commit using the message below.
+After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address all blocking and major findings. Re-run the review if fixes were required. Once clean, update the plan document to reflect what was actually built (mark completed artifacts, record any deviations from the plan, update contracts if they changed), then commit using the message below.
 
 **Commit policy: NEVER include "Co-Authored-By: Claude" or any AI attribution in any commit.**
 
@@ -551,3 +562,4 @@ When assigning skills to tasks, use only skills that exist in `.claude/skills/` 
 - **If the user is right, say so and move on.** Being challenging doesn't mean being contrarian.
 - **Never co-author commits.** Commits must NEVER include "Co-Authored-By: Claude" or any AI attribution — not in any phase, not in any plan, not under any circumstances. Every plan document must state this explicitly in the Commit Policy section and in every phase's Code Review block.
 - **Code review before commit, always.** No phase is complete until the code review is clean and the commit is made. These steps are mandatory, not optional.
+- **Update the plan after each phase.** Before committing, update the plan document to reflect what was actually built — completed artifacts, deviations, contract changes. A plan that diverges from the code is a liability, not an asset.
