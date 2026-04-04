@@ -187,6 +187,18 @@ When the code review subagent returns findings:
 - **Duplication and abstraction findings:** Evaluate whether they should be addressed now or tracked for later. If the same duplication finding appears across multiple phases, it must be addressed — it's no longer premature.
 - **Clean review:** Proceed to commit.
 
+#### Extract Generic Testing Utilities
+
+Before updating the plan document, scan the phase's test files for duplication — both within the phase and against tests written in previous phases:
+
+- **Repeated setup patterns** (e.g., identical `beforeEach` blocks, factory sequences, mock configurations) that appear in two or more test files should be extracted into a shared test helper.
+- **Repeated assertion patterns** (e.g., checking the same resource shape, asserting the same permission structure) that appear in multiple tests should become a named assertion helper or custom matcher.
+- **Repeated fixture data** (e.g., the same stubbed API response constructed in multiple tests) should be moved to a shared fixture file.
+
+Only extract when duplication is concrete and present — not speculative. A single test using a pattern is not duplication. Two or more tests using the same pattern is. Place shared test utilities in a `tests/Support/` (PHP) or `resources/js/tests/utils/` (TypeScript) directory. If a utility already exists that covers the need, use it rather than creating a duplicate.
+
+If utilities were extracted, add them to the phase's artifact tables in the plan document before committing.
+
 #### Update the Plan Document After Review
 
 Once the code review is clean, **update the plan document** before committing:
@@ -215,14 +227,18 @@ Each phase in the plan document includes a Code Review section and a Commit line
 ```markdown
 #### Code Review
 
-After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address all blocking and major findings. Re-run the review if fixes were required. Once clean, update the plan document to reflect what was actually built (mark completed artifacts, record any deviations, update contracts if they changed), then commit using the message below.
+After implementation, run the `code-review` skill as a subagent against all artifacts in this phase. Address all blocking and major findings. Re-run the review if fixes were required. Once clean:
+
+1. **Extract generic testing utilities** — scan test files for duplication within this phase and against previous phases. Extract repeated setup, assertion, or fixture patterns into shared helpers under `tests/Support/` (PHP) or `resources/js/tests/utils/` (TypeScript). Only extract concrete duplication, not speculative reuse.
+2. **Update the plan document** — mark completed artifacts, record any deviations, update contracts if they changed, add any extracted utilities to the artifact tables.
+3. **Commit** using the message below.
 
 **Commit policy: NEVER include "Co-Authored-By: Claude" or any AI attribution in any commit.**
 
 #### Commit: `{commit message here}`
 ```
 
-This ensures every phase in every plan explicitly accounts for the review-then-update-then-commit sequence.
+This ensures every phase in every plan explicitly accounts for the review-then-extract-then-update-then-commit sequence.
 
 ### Phase 7: Update Documentation
 
