@@ -2,7 +2,6 @@
 name: gap-analysis
 description: Perform a gap analysis on a feature, system, or spec — identifying missing business requirements, technical gaps, functionality holes, and unaddressed risks. Use when the user wants to audit completeness, find what's missing, or stress-test a plan/feature/codebase.
 argument-hint: "[feature, spec, plan, or area to analyze]"
-allowed-tools: Read, Grep, Glob, Agent, WebSearch, WebFetch
 ---
 
 # Gap Analysis Skill
@@ -22,13 +21,33 @@ Before ripping anything apart, understand what you're analyzing:
 
 Do not proceed until you have a comprehensive understanding of what exists and what was intended.
 
-### Phase 2: Business Requirements Audit
+### Phase 2: Research Industry Standards
+
+Before auditing anything, establish what "good" looks like for this problem domain. You cannot credibly identify gaps without knowing what the industry considers complete, safe, and correct. A gap is only a gap if something is actually missing relative to a known standard — not because you have a vague feeling something could be better.
+
+Use `WebSearch` to research:
+
+1. **Standard patterns for this problem domain.** How do well-regarded systems solve this class of problem? Look at official specifications, RFC documents, popular open-source implementations, and respected engineering references — not just one source.
+2. **Known failure modes and post-mortems.** What has gone wrong for others? What did they miss? Documented failures from similar systems are the strongest evidence that a gap matters.
+3. **Security and compliance baselines.** Are there OWASP guidelines, GDPR/HIPAA/PCI requirements, or framework-specific security conventions that apply? A plan that ignores a known security standard has a gap — full stop.
+4. **Completeness benchmarks.** What do comparable implementations include that this plan doesn't mention? If every serious implementation of this feature type includes X and the plan has no X, that's a gap worth raising.
+5. **Competing approaches and their documented trade-offs.** If the plan chose approach A over approach B, does industry evidence support that choice? If not, that's worth flagging.
+
+#### Recording research findings
+
+Every finding that informs a gap must be cited in the report's "Industry References" section with a name, URL, and one sentence on what it establishes. When raising a gap, reference the specific industry evidence that makes it a gap — not just your own judgement. "According to OWASP's ASVS, every authentication endpoint requires rate limiting (see Industry References #3) — this plan has none" is a defensible gap. "I think rate limiting is important" is not.
+
+Research findings that don't surface any gaps are still worth recording if they confirm the plan aligns with standard practice — that's useful signal for the reviewer too.
+
+Do not skip this phase. "I already know this domain" is not a substitute for evidence.
+
+### Phase 3: Business Requirements Audit
 
 Tear apart the business logic completeness:
 
 Look for: unaddressed user stories or roles, happy-path-only thinking (no edge cases), missing regulatory/compliance/accessibility requirements, vague requirements without acceptance criteria, contradictory requirements, implicit business rules, and unvalidated assumptions. Business gaps are the most expensive to fix later.
 
-### Phase 3: Technical Requirements Audit
+### Phase 4: Technical Requirements Audit
 
 Now attack the technical foundation:
 
@@ -41,7 +60,7 @@ Audit each area for gaps:
 - **Performance:** N+1 queries, missing indexes, caching strategy, race conditions, background job needs
 - **Infrastructure:** monitoring/alerting, health checks, migration safety, environment configs
 
-### Phase 4: Functionality Gaps
+### Phase 5: Functionality Gaps
 
 Evaluate the implemented (or planned) functionality against what's actually needed:
 
@@ -70,7 +89,7 @@ Evaluate the implemented (or planned) functionality against what's actually need
 - Are there missing retry mechanisms for transient failures?
 - Is there dead letter / failed job handling?
 
-### Phase 5: Testing Gaps
+### Phase 6: Testing Gaps
 
 Tests are documentation of what you care about. Missing tests = things no one verified:
 
@@ -82,7 +101,7 @@ Tests are documentation of what you care about. Missing tests = things no one ve
 - Is there performance testing for operations that need to scale?
 - Are destructive operations tested for safety (soft delete, cascade behavior)?
 
-### Phase 6: Documentation & Knowledge Gaps
+### Phase 7: Documentation & Knowledge Gaps
 
 - Is the feature documented for end users?
 - Is the technical implementation documented for developers?
@@ -104,6 +123,13 @@ Present findings as a structured report. Every gap gets a severity and a justifi
 
 **Overall Readiness:** {Not Ready | Significant Gaps | Minor Gaps | Ready with Caveats}
 
+## Industry References
+
+{Sources consulted during research that informed this analysis. Each entry links to a specific standard, post-mortem, specification, or implementation that establishes what "complete" or "correct" looks like for this domain. Gaps backed by industry evidence are cited by reference number in the gap's Evidence field.}
+
+- **[REF-1] {Name}** — [{Source / Author}]({url})
+  {One sentence: what this establishes. E.g. "OWASP ASVS 2.1.1 requires account lockout after N failed attempts" or "Stripe's API design doc defines the pagination contract we're comparing against" or "The 2023 Shopify post-mortem on double-charge bugs documents the race condition pattern we flagged in GAP-3."}
+
 ## Critical Gaps
 
 {These are blockers. The feature/system should not ship or be considered complete with these unresolved.}
@@ -112,7 +138,7 @@ Present findings as a structured report. Every gap gets a severity and a justifi
 
 **Severity:** Critical
 **Impact:** {Who is affected and how. Be specific.}
-**Evidence:** {What you found — reference specific files, code, specs, or the absence thereof.}
+**Evidence:** {What you found — reference specific files, code, specs, the absence of artifacts, or industry standards by REF number (e.g. "REF-1 requires X; this plan has no X").}
 **Argument:** {Why this matters. Fight for this. Anticipate counterarguments and dismantle them preemptively.}
 **Recommendation:** {What needs to happen to close this gap.}
 
@@ -126,7 +152,7 @@ Present findings as a structured report. Every gap gets a severity and a justifi
 
 **Severity:** Major
 **Impact:** {Who is affected and how.}
-**Evidence:** {What you found.}
+**Evidence:** {What you found — reference specific files, code, specs, the absence of artifacts, or industry standards by REF number.}
 **Argument:** {Why this matters.}
 **Recommendation:** {What needs to happen.}
 
@@ -140,7 +166,7 @@ Present findings as a structured report. Every gap gets a severity and a justifi
 
 **Severity:** Minor
 **Impact:** {Who is affected and how.}
-**Evidence:** {What you found.}
+**Evidence:** {What you found — reference specific files, code, specs, the absence of artifacts, or industry standards by REF number.}
 **Argument:** {Why this matters.}
 **Recommendation:** {What needs to happen.}
 
@@ -161,7 +187,8 @@ Present findings as a structured report. Every gap gets a severity and a justifi
 
 ## Rules
 
-- **Every gap needs evidence** — cite specific files, line numbers, or the absence of artifacts. No vague concerns.
+- **Every gap needs evidence** — cite specific files, line numbers, the absence of artifacts, or industry standards by REF number. No vague concerns.
+- **Industry standards are first-class evidence.** "REF-2 (OWASP ASVS 4.1.3) requires X and this plan has none" is stronger evidence than any opinion. Research before auditing.
 - **Defend findings aggressively.** Don't fold unless disproved with evidence. "We'll handle that later" confirms the gap exists.
 - **Severity is based on impact, not effort.** A critical gap doesn't become minor because it's hard to fix.
 - **Absence of evidence is evidence of absence.** No test for a critical path = gap. No error handling for a failure mode = gap.

@@ -2,7 +2,6 @@
 name: plan
 description: Plan a feature by challenging ideas, identifying artifacts (controllers, actions, resources, etc.), and producing a phased implementation doc. Use when the user wants to plan, architect, or strategize before building.
 argument-hint: "[feature or problem description]"
-allowed-tools: Read, Grep, Glob, Write, Edit, Agent
 ---
 
 # Plan Skill
@@ -21,7 +20,30 @@ Before solutioning, force clarity on the problem:
 
 Do not move past this phase until the problem statement is crisp and agreed upon.
 
-### Phase 2: Challenge the Approach
+### Phase 2: Research Industry Standards
+
+Before forming any opinions about the approach, research how others have solved this class of problem. Uninformed challenges are just opinions. Informed challenges are grounded in evidence.
+
+Use `WebSearch` to research:
+
+1. **Established patterns for this problem domain.** Search for how the industry approaches this type of feature — not just one blog post, but the consensus across multiple credible sources (official docs, RFC/spec documents, well-regarded engineering blogs, popular open-source implementations).
+2. **Known failure modes and lessons learned.** What have others gotten wrong with this approach? What edge cases caught people off guard? What do post-mortems say?
+3. **Existing packages or libraries in the project's ecosystem.** Before proposing a custom solution, check whether a well-maintained package already solves this. Prefer proven libraries over bespoke implementations when the trade-offs are favourable.
+4. **Competing approaches and their trade-offs.** If there are multiple common patterns, understand why teams choose one over the other. What constraints lead to each choice?
+
+#### What to do with research findings
+
+- **Cite specific examples in the plan document.** Every meaningful finding must be recorded in the plan's "Industry References" section with a name, source URL, and one-sentence relevance note. Findings that don't make it into the plan didn't happen as far as reviewers are concerned.
+- **Integrate findings into the challenge phase.** Use what you learned to sharpen your challenges and ground them in evidence rather than gut feel. Reference the cited examples when challenging — "Stripe's API design uses X pattern for this reason" is stronger than "some companies do X."
+- **Surface prior art proactively.** If research reveals a well-known solution that fits, present it as a concrete alternative with a citation, not just "have you considered X."
+- **Identify anti-patterns.** If the proposed approach is a known anti-pattern with documented downsides, say so explicitly and link the evidence in the plan.
+- **Note where the project diverges from standard practice.** Sometimes the codebase has good reasons to deviate from convention; sometimes it's just legacy. Record the deviation and the reason in the plan so reviewers can assess it.
+
+The "Industry References" section in the plan document is the evidence trail. A plan reviewer should be able to read that section and independently verify that the approach is informed by how the industry has solved this problem, where the plan aligns with common practice, and where it deliberately diverges and why.
+
+Do not skip this phase because the problem seems familiar. Assumptions based on past experience are not a substitute for checking whether the field has moved on.
+
+### Phase 3: Challenge the Approach
 
 Once the problem is clear, aggressively evaluate the proposed approach:
 
@@ -279,6 +301,13 @@ As the conversation continues and decisions evolve:
 ## Current State
 
 {Brief description of where things stand today. What exists, what doesn't.}
+
+## Industry References
+
+{Specific examples, prior art, and standards consulted during planning. Each entry is a named source with a URL and a note on how it informed this plan — what it confirmed, what it warned against, or where this plan deliberately diverges from it. A plan reviewer should be able to follow these links and independently verify that the approach is grounded in how the industry has solved this class of problem.}
+
+- **{Name}** — [{Source / Author}]({url})
+  {One sentence: what this source contributed. E.g. "Confirms that optimistic locking is the standard approach for this concurrency pattern" or "Documents the N+1 failure mode we're guarding against in Phase 2" or "We diverge from their pagination approach because our data model requires cursor-based pagination."}
 
 ## Decisions Made
 
