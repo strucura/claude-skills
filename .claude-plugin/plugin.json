@@ -1,9 +1,10 @@
 {
   "name": "strucura",
   "description": "Full-stack development skills for Laravel backends (controllers, actions, form requests, resources, datagrids, charts) and TypeScript frontends (packages, testing, Inertia pages, publishing), with architectural planning.",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "author": {
     "name": "Andrew Leach"
   },
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
 }
