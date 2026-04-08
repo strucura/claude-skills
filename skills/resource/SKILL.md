@@ -26,7 +26,7 @@ Before creating a Resource, scan the project to understand conventions:
 
 ## Creating a Resource
 
-### Template — Standard Resource
+### Template — Resource (covers standard fields, relationships, and conditional fields)
 
 ```php
 <?php
@@ -43,98 +43,30 @@ class {Model}Resource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'description' => $this->description,
             'status' => $this->status,
-            'created_at' => $this->created_at?->toAtomString(),
-            'updated_at' => $this->updated_at?->toAtomString(),
-        ];
-    }
-}
-```
 
-### Template — Resource with Relationships
-
-```php
-<?php
-
-namespace App\Domains\Application\Assets\Resources;
-
-use App\Domains\Settings\Users\Resources\UserResource;
-use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
-
-class AssetResource extends JsonResource
-{
-    public function toArray(Request $request): array
-    {
-        return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'description' => $this->description,
-            'status' => $this->status,
-            'assigned_to' => UserResource::make($this->whenLoaded('assignedUser')),
-            'category' => AssetCategoryResource::make($this->whenLoaded('category')),
+            // Relationships — always use whenLoaded()
+            'category' => CategoryResource::make($this->whenLoaded('category')),
             'tags' => TagResource::collection($this->whenLoaded('tags')),
+
+            // Conditional fields — only include when condition is met
+            'secret_key' => $this->when($request->user()?->isAdmin(), $this->secret_key),
+
+            // Dates — toAtomString() for _at, format('Y-m-d') for _on
             'created_at' => $this->created_at?->toAtomString(),
             'updated_at' => $this->updated_at?->toAtomString(),
         ];
     }
-}
-```
-
-### Template — Resource with Conditional Fields
-
-```php
-public function toArray(Request $request): array
-{
-    return [
-        'id' => $this->id,
-        'name' => $this->name,
-
-        // Only include when the relationship is loaded
-        'owner' => UserResource::make($this->whenLoaded('owner')),
-
-        // Only include when explicitly requested
-        'secret_key' => $this->when($request->user()?->isAdmin(), $this->secret_key),
-    ];
 }
 ```
 
 ## Using Resources
 
-- **Singular:** `AssetResource::make($asset)` — for show pages and API detail endpoints
-- **Collection:** `AssetResource::collection($assets)` — for index pages and API list endpoints
-- **Paginated:** `AssetResource::collection(Asset::paginate())` — pagination metadata is preserved automatically
-- Works identically for Inertia props and API JSON responses
-
-## Custom Collection Resources
-
-Only create a dedicated `ResourceCollection` class when you need custom meta or wrapper logic on the collection itself (e.g., summary counts). This is rare — prefer `::collection()` in most cases.
+Use `::make()` for singular and `::collection()` for lists (pagination metadata is preserved automatically). Works for both Inertia props and API JSON. Only create a dedicated `ResourceCollection` class when you need custom meta or wrapper logic — prefer `::collection()` in most cases.
 
 ## Best Practices
 
-**Avoid:** Never use `new`, never access relationships without `whenLoaded()`, never use `parent::toArray()`, never pass raw related models.
-
-### Use Consistent Key Naming
-
-Use `snake_case` keys to match Laravel/database conventions:
-
-```php
-return [
-    'id' => $this->id,
-    'full_name' => $this->full_name,
-    'created_at' => $this->created_at?->toAtomString(),
-    'assigned_to' => UserResource::make($this->whenLoaded('assignedUser')),
-];
-```
-
-### Date Formatting Conventions
-
-Use `->toAtomString()` for `_at` columns, `->format('Y-m-d')` for `_on` columns.
-
-## Naming Conventions
-
-Name resources `{Model}Resource`. Only create `{Model}Collection` when custom collection meta is needed.
+Use `snake_case` keys. Use `->toAtomString()` for `_at` columns, `->format('Y-m-d')` for `_on` columns. Never use `new`, never access relationships without `whenLoaded()`, never use `parent::toArray()`.
 
 ## Checklist
 

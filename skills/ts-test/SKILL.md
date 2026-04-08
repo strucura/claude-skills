@@ -28,28 +28,12 @@ Before writing tests:
 
 ## Vitest Configuration
 
-```typescript
-import { defineConfig } from 'vitest/config';
-import path from 'path';
-
-export default defineConfig({
-  test: {
-    environment: 'node',  // Use 'jsdom' when code interacts with DOM APIs (localStorage, window, document)
-    globals: true,
-    // setupFiles: ['./src/test-setup.ts'],  // Add for jsdom with @testing-library/jest-dom
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-});
-```
+Configure `environment: 'node'` (or `'jsdom'` for DOM APIs), `globals: true`, and a `@` path alias. Add `setupFiles: ['./src/test-setup.ts']` for jsdom with `@testing-library/jest-dom`.
 
 ## Test File Structure
 
 ```typescript
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { calculateTotal } from './calculate-total';
 
 describe('calculateTotal', () => {
@@ -57,32 +41,13 @@ describe('calculateTotal', () => {
     expect(calculateTotal([])).toBe(0);
   });
 
-  it('sums item prices', () => {
-    const items = [
-      { name: 'Widget', price: 10 },
-      { name: 'Gadget', price: 25 },
-    ];
-
-    expect(calculateTotal(items)).toBe(35);
-  });
-
-  it('applies a discount percentage', () => {
-    const items = [{ name: 'Widget', price: 100 }];
-
-    expect(calculateTotal(items, { discount: 0.1 })).toBe(90);
-  });
-
   it('throws on negative prices', () => {
-    const items = [{ name: 'Widget', price: -5 }];
-
-    expect(() => calculateTotal(items)).toThrow('Price cannot be negative');
+    expect(() => calculateTotal([{ name: 'Widget', price: -5 }])).toThrow('Price cannot be negative');
   });
 });
 ```
 
-### Structure Conventions
-
-1. **No nesting beyond two levels** — `describe` > `it`. Use a second `describe` inside for method grouping on classes, not for conditional branching.
+No nesting beyond two levels — `describe` > `it`. Use a second `describe` inside for method grouping on classes, not for conditional branching.
 
 ## Testing Patterns
 
@@ -251,20 +216,6 @@ describe('debounce', () => {
     expect(fn).toHaveBeenCalledOnce();
   });
 
-  it('resets the timer on subsequent calls', () => {
-    const fn = vi.fn();
-    const debounced = debounce(fn, 300);
-
-    debounced();
-    vi.advanceTimersByTime(200);
-    debounced(); // reset
-    vi.advanceTimersByTime(200);
-
-    expect(fn).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(100);
-    expect(fn).toHaveBeenCalledOnce();
-  });
 });
 ```
 

@@ -157,140 +157,41 @@ export interface SelectOption {
 
 ### Index Page (List)
 
+Props use `PaginatedResponse<T>` and a `can` object. Component wraps in layout, renders `<Head>`, maps `assets.data`, and guards create links with `can.create`.
+
 ```typescript
-import { Head, Link } from '@inertiajs/react';
-import type { PaginatedResponse } from '@/types';
-import AppLayout from '@/layouts/AppLayout';
-
 interface AssetIndexProps {
-  assets: PaginatedResponse<{
-    id: number;
-    name: string;
-    status: string;
-    created_at: string;
-  }>;
-  can: {
-    create: boolean;
-  };
-}
-
-export default function Index({ assets, can }: AssetIndexProps) {
-  return (
-    <AppLayout>
-      <Head title="Assets" />
-
-      <div>
-        <h1>Assets</h1>
-
-        {can.create && (
-          <Link href={route('assets.create')}>Create Asset</Link>
-        )}
-
-        <ul>
-          {assets.data.map((asset) => (
-            <li key={asset.id}>
-              <Link href={route('assets.show', asset.id)}>
-                {asset.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </AppLayout>
-  );
+  assets: PaginatedResponse<{ id: number; name: string; status: string; created_at: string }>;
+  can: { create: boolean };
 }
 ```
 
 ### Show Page (Detail)
 
-Same structure as Index. Props contain a single object instead of `PaginatedResponse`. Use `can` for conditional edit/delete links.
+Props contain a single object (not paginated). Use `can` for conditional edit/delete links.
 
 ```typescript
 interface AssetShowProps {
-  asset: {
-    id: number;
-    name: string;
-    description: string | null;
-    status: string;
-    category: { id: number; name: string } | null;
-    created_at: string;
-  };
-  can: {
-    edit: boolean;
-    destroy: boolean;
-  };
+  asset: { id: number; name: string; description: string | null; status: string; category: { id: number; name: string } | null; created_at: string };
+  can: { edit: boolean; destroy: boolean };
 }
 ```
 
 ### Create/Edit Page (Form)
 
+Uses `useForm` for state, submission, errors, and processing. Each field follows the pattern: `value={data.field}`, `onChange={(e) => setData('field', e.target.value)}`, `{errors.field && <p>{errors.field}</p>}`.
+
 ```typescript
-import { Head, useForm, router } from '@inertiajs/react';
-import type { FormEventHandler } from 'react';
-import AppLayout from '@/layouts/AppLayout';
-import type { SelectOption } from '@/types';
+interface AssetCreateProps { categories: SelectOption[] }
 
-interface AssetCreateProps {
-  categories: SelectOption[];
-}
-
-export default function Create({ categories }: AssetCreateProps) {
-  const { data, setData, post, processing, errors, reset } = useForm({
-    name: '',
-    description: '',
-    status: 'draft',
-    category_id: '',
-  });
-
-  const submit: FormEventHandler = (e) => {
-    e.preventDefault();
-    post(route('assets.store'), {
-      onSuccess: () => reset(),
-    });
-  };
-
-  return (
-    <AppLayout>
-      <Head title="Create Asset" />
-
-      <form onSubmit={submit}>
-        <div>
-          <label htmlFor="name">Name</label>
-          <input
-            id="name"
-            type="text"
-            value={data.name}
-            onChange={(e) => setData('name', e.target.value)}
-          />
-          {errors.name && <p>{errors.name}</p>}
-        </div>
-
-        {/* Repeat pattern for additional fields */}
-
-        <div>
-          <label htmlFor="category_id">Category</label>
-          <select
-            id="category_id"
-            value={data.category_id}
-            onChange={(e) => setData('category_id', e.target.value)}
-          >
-            <option value="">Select a category</option>
-            {categories.map((cat) => (
-              <option key={cat.value} value={cat.value}>
-                {cat.label}
-              </option>
-            ))}
-          </select>
-          {errors.category_id && <p>{errors.category_id}</p>}
-        </div>
-
-        <button type="submit" disabled={processing}>
-          Create Asset
-        </button>
-      </form>
-    </AppLayout>
-  );
-}
+// In component:
+const { data, setData, post, processing, errors, reset } = useForm({
+  name: '', description: '', status: 'draft', category_id: '',
+});
+const submit: FormEventHandler = (e) => {
+  e.preventDefault();
+  post(route('assets.store'), { onSuccess: () => reset() });
+};
 ```
 
 ### Edit Page (Pre-filled Form)
@@ -303,37 +204,12 @@ Same structure as Create, with two differences:
 
 ### Persistent Layout
 
+Layout wraps all pages. Destructure `usePage().props` for `auth` and `flash`. Render nav, flash messages (`role="alert"`), and `{children}`.
+
 ```typescript
-import { Link, usePage } from '@inertiajs/react';
-import type { ReactNode } from 'react';
-
-interface AppLayoutProps {
-  children: ReactNode;
-}
-
-export default function AppLayout({ children }: AppLayoutProps) {
-  const { auth, flash } = usePage().props;
-
-  return (
-    <div>
-      <nav>
-        <Link href={route('dashboard')}>Dashboard</Link>
-        <Link href={route('assets.index')}>Assets</Link>
-        <span>{auth.user.name}</span>
-      </nav>
-
-      {flash.success && (
-        <div role="alert">{flash.success}</div>
-      )}
-
-      {flash.error && (
-        <div role="alert">{flash.error}</div>
-      )}
-
-      <main>{children}</main>
-    </div>
-  );
-}
+interface AppLayoutProps { children: ReactNode }
+// const { auth, flash } = usePage().props;
+// Render: nav links, flash.success/flash.error as role="alert", <main>{children}</main>
 ```
 
 For sections with sub-navigation (e.g., Settings), create a nested layout that wraps `AppLayout` and adds sidebar nav.
@@ -368,29 +244,12 @@ For delete operations, use `router.delete(route('assets.destroy', id))` directly
 ### Link Component
 
 ```typescript
-import { Link } from '@inertiajs/react';
-
-// Basic link
 <Link href={route('assets.index')}>Assets</Link>
-
-// With method (for non-GET requests embedded in the page)
-<Link href={route('assets.destroy', asset.id)} method="delete" as="button">
-  Delete
-</Link>
-
-// Preserve scroll position
-<Link href={route('assets.index', { page: 2 })} preserveScroll>
-  Next Page
-</Link>
-
-// Active state detection
-<Link
-  href={route('assets.index')}
-  className={route().current('assets.*') ? 'active' : ''}
->
-  Assets
-</Link>
+<Link href={route('assets.destroy', asset.id)} method="delete" as="button">Delete</Link>
+<Link href={route('assets.index')} className={route().current('assets.*') ? 'active' : ''}>Assets</Link>
 ```
+
+Use `method="delete"` for non-GET, `preserveScroll` for pagination, `as="button"` for non-anchor semantics.
 
 ### Programmatic Navigation
 
@@ -405,11 +264,6 @@ route('assets.index')                    // /assets
 route('assets.show', asset.id)           // /assets/1
 route().current('assets.*')              // true if current route matches
 ```
-
-## What This Skill Does NOT Cover
-
-- **Backend controllers, routes, or resources** → use `controller`, `form-request`, `resource` skills
-- **React component testing** → use `react-test` skill
 
 ## Checklist
 

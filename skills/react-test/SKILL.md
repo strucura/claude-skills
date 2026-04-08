@@ -108,47 +108,11 @@ describe('Counter', () => {
 
 ### Form Component Test
 
-```typescript
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { LoginForm } from './LoginForm';
-
-describe('LoginForm', () => {
-  it('submits the form with email and password', async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
-    render(<LoginForm onSubmit={onSubmit} />);
-
-    await user.type(screen.getByLabelText(/email/i), 'user@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'secret123');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
-
-    expect(onSubmit).toHaveBeenCalledWith({
-      email: 'user@example.com',
-      password: 'secret123',
-    });
-  });
-
-  // Also test: validation errors (submit without filling fields, assert role='alert'),
-  // disabled state during submission (assert toBeDisabled())
-});
-```
+For forms, use `getByLabelText` to query inputs, `user.type()` for text entry, and assert `onSubmit` receives the form data. Also test validation errors (`role='alert'`) and disabled state during submission (`toBeDisabled()`).
 
 ## Query Priority
 
 Query by role > label > text > testId. Use `getBy*` (present), `queryBy*` (absent), `findBy*` (async).
-
-```typescript
-// Element IS present
-expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
-
-// Element is NOT present
-expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-
-// Element appears after async operation
-expect(await screen.findByRole('alert')).toHaveTextContent('Saved');
-```
 
 ## Hook Testing
 
@@ -281,30 +245,13 @@ vi.mock('@inertiajs/react', async () => {
 
 ## Accessibility Assertions
 
+Assert accessible names with `toHaveAccessibleName()`, errors with `role='alert'` + `toHaveTextContent()`, focus management with `toHaveFocus()`.
+
 ```typescript
-it('has an accessible name', () => {
-  render(<SearchInput />);
-
-  expect(screen.getByRole('searchbox')).toHaveAccessibleName('Search assets');
-});
-
-it('announces errors to screen readers', async () => {
-  const user = userEvent.setup();
-  render(<LoginForm onSubmit={vi.fn()} />);
-
-  await user.click(screen.getByRole('button', { name: /sign in/i }));
-
-  const alert = screen.getByRole('alert');
-  expect(alert).toBeVisible();
-  expect(alert).toHaveTextContent(/email is required/i);
-});
-
 it('manages focus on modal open', async () => {
   const user = userEvent.setup();
   render(<ModalTrigger />);
-
   await user.click(screen.getByRole('button', { name: /open/i }));
-
   expect(screen.getByRole('dialog')).toHaveFocus();
 });
 ```
@@ -370,11 +317,6 @@ When a component part has no accessible role, fall back to `container.querySelec
 1. **`screen` queries still work** — Testing Library queries the entire document, not just the render container.
 2. **`container.querySelector` won't find portal content** — use `screen` queries instead.
 3. **Animation states** — use `waitFor` when asserting disappearance after close (Radix animates with `data-state`).
-
-## What This Skill Does NOT Cover
-
-- **Pure TypeScript unit tests** (no rendering) → use `ts-test` skill
-- **Creating shadcn components** → use `shadcn-component` skill
 
 ## Checklist
 

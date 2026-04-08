@@ -105,50 +105,24 @@ Files use kebab-case. Exports use camelCase (hooks/utils) or PascalCase (compone
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
-    "@testing-library/react": "^16.0.0",
-    "@testing-library/jest-dom": "^6.0.0",
-    "@testing-library/user-event": "^14.0.0",
-    "jsdom": "^25.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.0.0",
-    "vitest": "^3.0.0"
+    "@testing-library/react": "*",
+    "@testing-library/jest-dom": "*",
+    "@testing-library/user-event": "*",
+    "jsdom": "*",
+    "react": "*",
+    "react-dom": "*",
+    "tsup": "*",
+    "typescript": "*",
+    "vitest": "*"
   }
 }
 ```
 
-**Notes:**
-- `peerDependencies` declares React as a peer — the consuming app provides it.
-- React is also in `devDependencies` so tests can run standalone.
-- Omit `peerDependencies` for React if the package has no React dependency (pure TS utility library).
-- Adjust scope (`@{scope}/`) to match the user's npm org or remove for unscoped packages.
+React is both a peer dep (consumer provides it) and dev dep (tests run standalone). Omit React peers for pure TS utility libraries. Use current versions when scaffolding.
 
 ### tsconfig.json
 
-```json
-{
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "jsx": "react-jsx",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx"]
-}
+Key settings for package authoring: `moduleResolution: "bundler"`, `declaration: true`, `jsx: "react-jsx"`, `outDir: "./dist"`, `rootDir: "./src"`, and `paths: { "@/*": ["./src/*"] }`. Exclude `node_modules`, `dist`, and test files. Use strict mode.
 ```
 
 ### tsup.config.ts

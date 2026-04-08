@@ -96,47 +96,25 @@ import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
-const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
-  {
-    variants: {
-      variant: {
-        default: 'bg-primary text-primary-foreground shadow hover:bg-primary/90',
-        destructive: 'bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90',
-        // Add more variants as needed
-      },
-      size: {
-        default: 'h-9 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        // Add more sizes as needed
-      },
+const buttonVariants = cva('{base classes}', {
+  variants: {
+    variant: {
+      default: '{primary classes}',
+      destructive: '{destructive classes}',
     },
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
+    size: {
+      default: '{default size}',
+      sm: '{small size}',
     },
   },
-);
+  defaultVariants: { variant: 'default', size: 'default' },
+});
 
 function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  ...props
-}: React.ComponentProps<'button'> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
+  className, variant, size, asChild = false, ...props
+}: React.ComponentProps<'button'> & VariantProps<typeof buttonVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : 'button';
-
-  return (
-    <Comp
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  );
+  return <Comp data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
 }
 
 export { Button, buttonVariants };
@@ -266,26 +244,7 @@ CVA structure: `cva('base-classes', { variants: { ... }, compoundVariants: [...]
 
 ## The `asChild` / Slot Pattern
 
-The `asChild` prop replaces the component's root element with the child element, merging props and refs. Powered by `@radix-ui/react-slot`.
-
-```typescript
-import { Slot } from '@radix-ui/react-slot';
-
-function Button({ asChild = false, ...props }) {
-  const Comp = asChild ? Slot : 'button';
-  return <Comp {...props} />;
-}
-
-// Renders as <button>
-<Button>Click me</Button>
-
-// Renders as <a> with all Button props merged onto it
-<Button asChild>
-  <a href="/about">Click me</a>
-</Button>
-```
-
-Support `asChild` on interactive components that may render as a different element. Skip for display-only components.
+The `asChild` prop replaces the component's root element with the child element, merging props and refs. Powered by `@radix-ui/react-slot`. Use `const Comp = asChild ? Slot : 'button'` pattern. Support `asChild` on interactive components; skip for display-only components.
 
 ## `data-slot` Convention
 
@@ -293,40 +252,17 @@ Every component part gets `data-slot` (kebab-case, matching component name). Use
 
 ## Radix Data Attributes
 
-Radix primitives expose state via `data-*` attributes. Use these for styling instead of managing state classes manually:
+Radix primitives expose state via `data-*` attributes. Use for styling instead of managing state classes:
 
 ```typescript
-// Radix automatically adds data-state="checked" / data-state="unchecked"
-className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-
-// Radix adds data-state="open" / data-state="closed"
-className="data-[state=open]:animate-in data-[state=closed]:animate-out"
-
-// Radix adds data-disabled when disabled
-className="data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
-
-// Radix adds data-side and data-align for positioned content
-className="data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1"
+className="data-[state=checked]:bg-primary data-[state=open]:animate-in data-[disabled]:opacity-50 data-[side=bottom]:translate-y-1"
 ```
+
+Common attributes: `data-state` (checked/unchecked, open/closed), `data-disabled`, `data-side`, `data-align`.
 
 ## CSS Variable Tokens
 
-shadcn components use CSS variable tokens from the project's Tailwind theme. These are the semantic color tokens:
-
-| Token | Purpose |
-|---|---|
-| `bg-background` / `text-foreground` | Page background and default text |
-| `bg-card` / `text-card-foreground` | Card surfaces |
-| `bg-popover` / `text-popover-foreground` | Popovers, dropdowns, tooltips |
-| `bg-primary` / `text-primary-foreground` | Primary actions (buttons, links) |
-| `bg-secondary` / `text-secondary-foreground` | Secondary actions |
-| `bg-muted` / `text-muted-foreground` | Subdued content, disabled states |
-| `bg-accent` / `text-accent-foreground` | Hover/active states |
-| `bg-destructive` / `text-destructive-foreground` | Destructive actions, errors |
-| `border-input` | Form input borders |
-| `ring-ring` | Focus ring color |
-
-Always use these semantic tokens — never hardcode colors. This ensures the component works across themes.
+Always use semantic tokens — never hardcode colors: `bg-background`/`text-foreground`, `bg-primary`/`text-primary-foreground`, `bg-secondary`, `bg-muted`, `bg-accent`, `bg-destructive`, `border-input`, `ring-ring`, and their card/popover equivalents.
 
 ## Icon Integration
 

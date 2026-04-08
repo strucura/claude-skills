@@ -115,62 +115,7 @@ public function rules(): array
 }
 ```
 
-### Reusable Validation Rule Traits
-
-For rules shared across multiple Form Requests, create a trait:
-
-```php
-<?php
-
-namespace App\Concerns;
-
-trait AssetValidationRules
-{
-    protected function assetNameRules(): array
-    {
-        return ['required', 'string', 'max:255'];
-    }
-}
-```
-
-### Custom Rules
-
-For complex validation, check for existing custom rule classes in the project. Create new ones when Laravel's built-in rules are insufficient:
-
-```php
-class ValidAssetCode implements ValidationRule
-{
-    public function validate(string $attribute, mixed $value, Closure $fail): void
-    {
-        if (!preg_match('/^[A-Z]{3}-\d{4}$/', $value)) {
-            $fail('The :attribute must be a valid asset code (e.g., ABC-1234).');
-        }
-    }
-}
-```
-
-### Custom Error Messages
-
-```php
-public function messages(): array
-{
-    return [
-        'name.required' => 'Please provide a name.',
-        'items.min' => 'At least one item is required.',
-    ];
-}
-```
-
-### Conditional Rules
-
-```php
-public function rules(): array
-{
-    return [
-        'reason' => [Rule::requiredIf($this->input('status') === 'cancelled'), 'string'],
-    ];
-}
-```
+For shared rules, use a trait with methods returning rule arrays. For complex validation, implement `ValidationRule`. For conditional rules, use `Rule::requiredIf()`. For custom error messages, override `messages()`.
 
 ### Data Transformation
 
@@ -189,8 +134,6 @@ When creating Form Requests for a feature:
 
 1. **Register all new permissions** in the Spatie seed migration
 2. **Assign permissions to roles** (owner, admin, member)
-3. **Type-hint the Form Request** in the controller method signature
-4. **Use `$request->validated()`** to access only validated data — never `$request->all()`
-5. **Pass `can` array to Inertia** for frontend permission-based UI
+3. **Pass `can` array to Inertia** for frontend permission-based UI
 6. **Add validation rules** where the endpoint accepts user input
 7. **Use validation rule traits** for rules shared across Form Requests
